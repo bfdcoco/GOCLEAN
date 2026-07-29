@@ -850,3 +850,15 @@ void UGObjectManager::HandleUseItemOnObject(APlayerController* PC, int32 ItemId,
             FString::Printf(TEXT("[Server][OM] UseItem %d -> Target=%d"), ItemId, TargetInstanceId));
     }
 }
+
+
+
+// 단서 행동
+void UGObjectManager::RegisterWindow(AActor* WindowActor)
+{
+    if (!WindowActor) return;
+
+    WindowList.Add(WindowActor);
+
+    UE_LOG(LogGObject, Log, TEXT("[WINDOW] Window registered: %d"), WindowList.Num);
+}

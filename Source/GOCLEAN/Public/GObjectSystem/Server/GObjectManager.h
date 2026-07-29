@@ -176,6 +176,25 @@ public:
 
 
 
+	// 단서 행동
+private:
+	// LeaveFrost
+	UPROPERTY()
+	TArray<AActor*> WindowList;
+
+	// SpillWaterBucket
+
+	// RestoreWaste
+
+
+public:
+	// LeaveFrost
+	const TArray<AActor*> GetWindowList() { return WindowList; }
+
+	void RegisterWindow(AActor* WindowActor);
+
+
+
 public:
 	// C -> S (서버 처리)
 
