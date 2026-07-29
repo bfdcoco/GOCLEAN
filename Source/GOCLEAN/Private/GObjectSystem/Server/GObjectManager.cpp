@@ -18,6 +18,7 @@
 #include "GTypes/DataTableRow/GObjectDataRow.h"
 
 #include "EngineUtils.h"
+#include "Kismet/GameplayStatics.h"
 
 
 ////////////////////////////////////////////
@@ -76,6 +77,8 @@ void UGObjectManager::OnWorldBeginPlay(UWorld& InWorld)
     Super::OnWorldBeginPlay(InWorld);
 
     InitiateObjects();
+
+    InitializeWindowList();
 }
 
 
@@ -333,6 +336,7 @@ void UGObjectManager::OnDestoyed(AGNonfixedObject* DestroyedObj, const FGObjectD
     if (Data->Category == EGObjectCategory::E_Trash_B)
     {
         DestroyedObjs.Enqueue(DestroyedObj->GetNonfixedObjCoreComp()->IID);
+        DestroyedBigWasteIndices.Add(DestroyedObj->GetNonfixedObjCoreComp()->IID);
     }
     else
     {
@@ -854,11 +858,47 @@ void UGObjectManager::HandleUseItemOnObject(APlayerController* PC, int32 ItemId,
 
 
 // 단서 행동
+
+// LeaveFrost
+void UGObjectManager::InitializeWindowList()
+{
+    WindowList.Empty();
+
+    UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("Window"), WindowList);
+
+    UE_LOG(LogTemp, Log, TEXT("[WINDOW] Found windows: %d"), WindowList.Num());
+}
+
+
+// SpillWaterBucket
+void UGObjectManager::RegisterBucketIndex(int32 IID)
+{
+    if (!NfixedObjects.Contains(IID)) return;
+
+    BucketIndices.Add(IID);
+
+    UE_LOG(LogTemp, Log, TEXT("[BUCKET] New bucket was spawned! : Instance ID - %d"), IID);
+}
+
+
+// RestoreWaste
+void UGObjectManager::RegisterDestroyedBigWasteIndex(int32 IID)
+{
+    if (!NfixedObjects.Contains(IID)) return;
+
+    DestroyedBigWasteIndices.Add(IID);
+
+    UE_LOG(LogTemp, Log, TEXT("[WASTE] New big waste was destroyed! : Instance ID - %d"), IID);
+}
+
+
+
+// legacy
 void UGObjectManager::RegisterWindow(AActor* WindowActor)
 {
     if (!WindowActor) return;
 
     WindowList.Add(WindowActor);
 
-    UE_LOG(LogGObject, Log, TEXT("[WINDOW] Window registered: %d"), WindowList.Num);
+    UE_LOG(LogGObject, Log, TEXT("[WINDOW] Window registered: %d"), WindowList.Num());
 }

@@ -182,9 +182,15 @@ private:
 	UPROPERTY()
 	TArray<AActor*> WindowList;
 
+	void InitializeWindowList();
+
+
 	// SpillWaterBucket
+	TArray<int32> BucketIndices;
+
 
 	// RestoreWaste
+	TArray<int32> DestroyedBigWasteIndices;
 
 
 public:
@@ -192,6 +198,18 @@ public:
 	const TArray<AActor*> GetWindowList() { return WindowList; }
 
 	void RegisterWindow(AActor* WindowActor);
+
+
+	// SpillWaterBucket
+	void RegisterBucketIndex(int32 IID);
+
+	const TArray<int32> GetBucketIndices() { return BucketIndices; }
+
+
+	// RestoreWaste
+	void RegisterDestroyedBigWasteIndex(int32 IID);
+
+	const TArray<int32> GetDestroyedBigWasteIndices() { return DestroyedBigWasteIndices; }
 
 
 
