@@ -211,6 +211,8 @@ public:
 
 	const TArray<int32> GetDestroyedBigWasteIndices() { return DestroyedBigWasteIndices; }
 
+	void RestoreBigWasteObject(int32 IID);
+
 
 
 public:

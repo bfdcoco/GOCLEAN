@@ -891,6 +891,28 @@ void UGObjectManager::RegisterDestroyedBigWasteIndex(int32 IID)
     UE_LOG(LogTemp, Log, TEXT("[WASTE] New big waste was destroyed! : Instance ID - %d"), IID);
 }
 
+void UGObjectManager::RestoreBigWasteObject(int32 IID)
+{
+    AGNonfixedObject* Obj = GetNonfixedObject(IID);
+    if (!IsValid(Obj)) return;
+
+
+    // change the closest waste's state : static
+    Obj->GetNonfixedObjCoreComp()->ChangeState(ENonfixedObjState::E_Static);
+
+
+    // add spritual guage
+    auto* DataManager = GetWorld()->GetGameInstance()->GetSubsystem<UGDataManagerSubsystem>();
+    auto* Data = DataManager ? DataManager->GetObjectData(Obj->GetNonfixedObjCoreComp()->TID) : nullptr;
+
+    AGameSessionState* GameState = Cast<AGameSessionState>(GetWorld()->GetGameState());
+
+    if (Data && GameState)
+    {
+        GameState->AddSpiritualGauge(Data->Pollution);
+    }
+}
+
 
 
 // legacy
