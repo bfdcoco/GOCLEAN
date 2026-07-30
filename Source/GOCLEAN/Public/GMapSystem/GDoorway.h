@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "GTypes/IGInteractable.h"
 
 #include "GDoorway.generated.h"
 
@@ -22,6 +23,22 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	void CloseDoor() 
+	{
+		bIsClosed = true;
+		OnRep_IsClosed();
+	}
+
+	void OpenDoor()
+	{
+		bIsClosed = false;
+		OnRep_IsClosed();
+	}
+
+	bool IsClosed() { return bIsClosed; }
+	bool CanClose() { return bCanClose; }
+
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -33,12 +50,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Components")
 	class UBoxComponent* TriggerBox;
 
-
 	// replicated
-	UPROPERTY(VisibleAnywhere, Replicated, Category = "Zone")
+	UPROPERTY(EditAnywhere, Replicated, Category = "Zone")
 	FName FromZone;
 
-	UPROPERTY(VisibleAnywhere, Replicated, Category = "Zone")
+	UPROPERTY(EditAnywhere, Replicated, Category = "Zone")
 	FName ToZone;
 
 	UPROPERTY(EditAnywhere, Replicated, Category = "Status")
@@ -67,6 +83,10 @@ private:
 	// internal functions
 	int32 FindPlayerSessionIndex(AActor* PlayerActor);
 
+	// TEST
+	void TEST_OpenAllDoors();
+
+
 protected:
 	// Trigger
 	UFUNCTION()
@@ -75,5 +95,38 @@ protected:
 	// OnRep
 	UFUNCTION()
 	void OnRep_IsClosed();
+
+	UPROPERTY(EditAnywhere, Category = "Door")
+	class AGDoor* LinkedDoor;
+
+};
+
+
+
+UCLASS()
+class GOCLEAN_API AGDoor : public AActor, public IGInteractable
+{
+	GENERATED_BODY()
+
+
+	// Default & Replication
+public:
+	AGDoor() {};
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Door")
+	void ReceiveOnDoorStateChanged(bool bClosed);
+
+	virtual bool CanInteract(FName EquipID, AGOCLEANCharacter* Target) const;
+	virtual void ExecuteInteraction(FName EquipID, AGOCLEANCharacter* Target);
+
+
+	UPROPERTY(EditAnywhere, Category = "Door")
+	class AGDoorway* OwnerDoorway;
+
+
+	UPROPERTY(Replicated="ReceiveOnDoorStateChanged")
+	bool bIsClosed = true;
 
 };

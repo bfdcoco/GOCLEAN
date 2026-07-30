@@ -7,6 +7,7 @@
 #include "GTypes/DataTableRow/GEquipmentDataRow.h"
 #include "GTypes/DataTableRow/GMapDataRow.h"
 #include "GOCLEANSettings.h"
+#include "../GOCLEAN.h"
 
 
 const FGObjectDataRow* UGDataManagerSubsystem::GetObjectData(FName ID) const
@@ -35,6 +36,22 @@ const FGMapDataRow* UGDataManagerSubsystem::GetMapData(FName ID) const
 
     static const FString ContextString(TEXT("Object Data Lookup"));
     return MapDataTable->FindRow<FGMapDataRow>(ID, ContextString);
+}
+
+const TArray<FGMapDataRow*> UGDataManagerSubsystem::GetAllMapDatas() const
+{
+    TArray<FGMapDataRow*> Datas;
+
+    if (!MapDataTable)
+    {
+        UE_LOG(LogMap, Warning, TEXT("MapDataTable does not registered!"));
+        return Datas;
+    }
+
+    FString ContextString(TEXT("GetAllMapDatasContext"));
+    MapDataTable->GetAllRows<FGMapDataRow>(ContextString, Datas);
+
+    return Datas;
 }
 
 

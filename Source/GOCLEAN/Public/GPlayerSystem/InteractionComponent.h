@@ -20,7 +20,9 @@ public:
 	UPROPERTY(EditAnywhere, Category="Interaction")
 	float InteractionRange = 300.0f;
 
-	UActorComponent* GetCurrentTarget() const { return CurrentTarget; }
+	UObject* GetCurrentTarget() const { return CurrentTarget; }
+
+	bool IsCheckingIncineratorZone() { return bIsCheckingIncineratorZone; }
 
 
 
@@ -28,12 +30,22 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
+
+
+	UPROPERTY(EditAnywhere, Category = "Interaction")
+	float IncineratorRange = 100.0f;
+
+	UPROPERTY(VisibleAnywhere, Category = "Interaction")
+	bool bIsCheckingIncineratorZone;
+
+
+
 public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	UPROPERTY()
-	UActorComponent* CurrentTarget;
+	UObject* CurrentTarget;
 
 	void PerformLineTrace();
 		

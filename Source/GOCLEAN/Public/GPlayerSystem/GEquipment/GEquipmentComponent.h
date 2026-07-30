@@ -9,6 +9,7 @@
 
 
 class AGOCLEANCharacter;
+class AGNonfixedObject;
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -17,69 +18,92 @@ class GOCLEAN_API UGEquipmentComponent : public UActorComponent
 	GENERATED_BODY()
 
 
-
 	// Variables
-private:
-	// only host
-
-
-
+protected:
 	// replicated
 	//		slot datas
-	UPROPERTY(Replicated)	
+	UPROPERTY(ReplicatedUsing="OnRep_CurrentSlotIndex")
 	int32 CurrentSlotIndex;
+
+	UFUNCTION()
+	void OnRep_CurrentSlotIndex();
+
 
 	UPROPERTY(Replicated)
 	TArray<FName> EquipmentSlots; // ¿Â∫Ò ΩΩ∑‘(size 4), element: equip ID
 
 
+	//		picked object
+	UPROPERTY(VisibleAnywhere, Replicated)
+	TArray<TObjectPtr<AGNonfixedObject>> HeldObjects;
+
+
 	//		pollution
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = "OnRep_MopPollusion")
 	float MopPollution;
 
+	UFUNCTION()
+	void OnRep_MopPollusion();
+	
 	UPROPERTY(Replicated)
 	float AutoMopPollution;
+
 	
 
 	//		owner character
 	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<AGOCLEANCharacter> Onwer;
-
-
-	//		picked ID
-	UPROPERTY(VisibleAnywhere, Replicated)
-	int32 PickedObjectID;
-
-	UPROPERTY(VisibleAnywhere, Replicated)
-	int32 PickedItemID;
-
+	TObjectPtr<AGOCLEANCharacter> Owner;
 
 
 	// functions - custom
 public:
 	// in-game
-	FName GetCurrentEquipmentID();
+	int32 GetCurrentSlotIndex() const { return CurrentSlotIndex; }
+
+	FName GetCurrentEquipmentID() const;
+
+
 	bool ChangeEuquipmentInCurrSlot(FName ChangedEquipID);
+
+	bool ChangeEquipment(int32 SlotIndex, FName EquipID);
+
+
 	bool ChangeCurrentSlot(int32 ChangedSlotIndex);
 
-	int32 GetPickedObjectID() const { return PickedObjectID; }
-	void SetPickedObjectID(int32 IID) { PickedObjectID = IID; }
-	int32 GetPickedItemID() const { return PickedItemID; }
-	void SetPickedItemID(int32 IID) { PickedItemID = IID; }
+
+	AGNonfixedObject* GetCurrentHeldObject() const;
+
+	AGNonfixedObject* GetHeldObject(int32 SlotIndex) const;
 
 
-private:
+	bool SetCurrentHeldObject(AGNonfixedObject* NFixedObject);
+
+	bool ChangeHeldObject(int32 SlotIndex, AGNonfixedObject* Obj);
+
+
+
+	UFUNCTION(BlueprintCallable)
+	void AddMopPollution(float Value);
+
+	UFUNCTION(BlueprintCallable)
+	void CleanMopPollution();
+
+	UFUNCTION(BlueprintCallable)
+	float GetMopPollution() { return MopPollution; }
+
+	UFUNCTION(BlueprintCallable)
+	float GetAutoMopPollution() { return AutoMopPollution; }
+
+
+
+protected:
 	// in-game
-	FName GetEquipmentID(int32 SlotIndex);
-	bool ChangeEquipment(int32 SlotIndex, FName EquipID);
+	FName GetEquipmentID(int32 SlotIndex) const;
 	bool ChangeCurrentSlot_Interval(int32 From, int32 To);
-
-	// in-construct 
 
 	// in-beginPlay
 	bool InitiateEquipmentSlots();
 	
-
 
 
 	// functions - default

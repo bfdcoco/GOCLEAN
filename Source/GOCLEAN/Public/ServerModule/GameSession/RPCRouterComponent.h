@@ -42,5 +42,9 @@ public:
 	// S -> C 플레이어 이벤트
 	UFUNCTION(Client, Reliable)
 	void Client_PlayerEvent(EPlayerEvent_S2C EventType, const FPlayerPayload_S2C& Payload);
+
+	// C -> S 청소 이벤트
+	UFUNCTION(Server, Reliable)
+	void Server_CleaningEvent(ECleaningEvent_C2S EventType, const FCleaningPayload_C2S& Payload);
 		
 };

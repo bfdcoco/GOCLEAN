@@ -52,8 +52,19 @@ public:
 	float CalculateAverageSanityCorruptionRate();
 
 
+	// Server //
+	UFUNCTION(Server, Reliable)
+	void Server_RequestPlayerHunt();
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayerHunt();
+
+	UFUNCTION(Server, Reliable)
+	void Server_RequestSetVisible(bool IsVisible);
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SetVisible(bool IsVisible);
 
 private:
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
 
 	// Overrieded //
 	void BeginPlay() override; // JSH TMP
@@ -82,9 +93,7 @@ private:
 	void EndlessPlayerHunt();
 
 	void FindTarget();
-
-
-
+	
 
 	// Check player sanity //
 	float PlayersSanityCorruptionRate;
@@ -93,16 +102,28 @@ private:
 
 	// State //
 
+public:
 	// Patrol
+	UPROPERTY(Replicated, BlueprintReadOnly)
 	bool bIsPatrolling;
 	FTimerHandle CheckArrivalToCurrentPointHandle;
 
 	// Chase
+	UPROPERTY(ReplicatedUsing=OnRep_IsChasing, BlueprintReadOnly)
 	bool bIsChasing;
+	UPROPERTY(Replicated=OnRep_IsRageEvent, BlueprintReadOnly)
 	bool bIsRageEvent;
+	UPROPERTY(Replicated, BlueprintReadOnly)
 	bool bIsUnendingRageEvent;
 	FTimerHandle ChasingPlayerHandle;
 
+	UFUNCTION()
+	void OnRep_IsRageEvent();
+
+	UFUNCTION()
+	void OnRep_IsChasing();
+
+private:
 	// Hunt
 	float ManifestRadius;
 	float HuntRadius;

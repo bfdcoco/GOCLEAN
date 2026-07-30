@@ -2,6 +2,7 @@
 
 
 #include "GPlayerSystem/Server/GPlayerManager.h"
+#include "GPlayerSystem/GEquipment/GEquipmentComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "GCharacter/GOCLEANCharacter.h"
 #include "GCharacter/StatsComponent/CharacterStatsComponent.h"
@@ -22,6 +23,10 @@ void UGPlayerManager::HandlePlayerEvent_C2S(APlayerController* PC, EPlayerEvent_
 
     case EPlayerEvent_C2S::RequestSetHeldItem:
         Handle_RequestSetHeldItem(PC, Payload);
+        break;
+
+    case EPlayerEvent_C2S::RequestChangeCurrentSlotIndex:
+        Handle_RequestChangeCurrentSlotIndex(PC, Payload);
         break;
 
     default:
@@ -61,4 +66,15 @@ void UGPlayerManager::Handle_RequestSetHeldItem(APlayerController* PC, const FPl
     // 캐릭터에서 HeldItem를 가지고 관리할 수 있도록.
     // Payload의 HeldItem 사용
     // Ch->ServerSetHeldItem(Payload.HeldItem);
+}
+
+void UGPlayerManager::Handle_RequestChangeCurrentSlotIndex(APlayerController* PC, const FPlayerPayload_C2S& Payload)
+{
+    AGOCLEANCharacter* Ch = GetCharacter(PC);
+    if (!Ch) return;
+
+    UGEquipmentComponent* EquipComp = Ch->GetEquipComp();
+    if (!EquipComp) return;
+
+    EquipComp->ChangeCurrentSlot(Payload.ParamInt);
 }

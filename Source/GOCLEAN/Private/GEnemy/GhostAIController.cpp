@@ -13,7 +13,7 @@ void AGhostAIController::UpdatePlayerList()
 	
 	AlivePlayers.Empty();
 
-	AGameSessionState* SessionState = GetWorld()->GetGameState<AGameSessionState>();
+	AGameSessionState* SessionState = Cast<AGameSessionState>(GetWorld()->GetGameState());
 	if (SessionState == nullptr) return;
 
 	UE_LOG(LogTemp, Warning, TEXT("AlivePlayers Num: %d"), AlivePlayers.Num());
@@ -85,7 +85,7 @@ void AGhostAIController::OnPossess(APawn* InPawn)
 	bIsPatrolling = true;
 
 	ManifestRadius = 500.0f;
-	HuntRadius = 100.0f;
+	HuntRadius = 150.0f;
 	
 	UpdatePlayerList();
 
@@ -97,6 +97,7 @@ void AGhostAIController::OnPossess(APawn* InPawn)
 void AGhostAIController::CheckPlayerSanityCorruptionRate()
 {
 	PlayersSanityCorruptionRate = CalculateAverageSanityCorruptionRate();
+	UpdatePlayerList();
 	// JSH Flag: Sanity
 	UE_LOG(LogTemp, Warning, TEXT("Player's current sanity corruption rate: %f"), (PlayersSanityCorruptionRate));
 
@@ -141,7 +142,8 @@ void AGhostAIController::CheckArrivalCurrentPatrolPoint()
 
 void AGhostAIController::CheckRageEventCondition()
 {
-	if (PlayersSanityCorruptionRate >= 30 && !bIsRageEvent) {
+	if (PlayersSanityCorruptionRate >= 1000 && !bIsRageEvent) {
+		Cast<AGhostBase>(GetPawn())->Multicast_PlayRageSound();
 		bIsRageEvent = true;
 		StartChase();
 	}
@@ -190,12 +192,16 @@ void AGhostAIController::PlayerHunt()
 	float Distance = FVector::Dist(GhostCharacter->GetActorLocation(), TargetPlayer->GetActorLocation());
 	if (Distance < ManifestRadius)
 	{
-		GhostCharacter->GetMesh()->SetHiddenInGame(false);
+		Cast<AGhostBase>(GetPawn())->Multicast_PlayChaseSound();
+		GhostCharacter->Server_RequestSetVisible(true);
 	}
 
 	if (Distance < HuntRadius)
 	{
-		GhostCharacter->GetMesh()->SetHiddenInGame(true);
+		Cast<AGhostBase>(GetPawn())->Multicast_StopChaseSound();
+		Cast<AGhostBase>(GetPawn())->Multicast_StopRageSound();
+		Cast<AGhostBase>(GetPawn())->Multicast_PlayOnHuntedSound();
+		GhostCharacter->Server_RequestSetVisible(false);
 		
 		Cast<AGOCLEANCharacter>(TargetPlayer)->Server_RequestOnHunted();
 
@@ -213,6 +219,22 @@ void AGhostAIController::PlayerHunt()
 		MoveToPatrolPoint();
 	}
 }
+void AGhostAIController::Server_RequestPlayerHunt_Implementation()
+{
+	Multicast_PlayerHunt();
+}
+void AGhostAIController::Multicast_PlayerHunt_Implementation()
+{
+	PlayerHunt();
+}
+void AGhostAIController::Server_RequestSetVisible_Implementation(bool IsVisible)
+{
+	Multicast_SetVisible(IsVisible);
+}
+void AGhostAIController::Multicast_SetVisible_Implementation(bool IsVisible)
+{
+	Cast<ACharacter>(GetPawn())->GetMesh()->SetHiddenInGame(!IsVisible);
+}
 
 void AGhostAIController::EndlessPlayerHunt()
 {
@@ -229,12 +251,12 @@ void AGhostAIController::EndlessPlayerHunt()
 	float Distance = FVector::Dist(GhostCharacter->GetActorLocation(), TargetPlayerCharacter->GetActorLocation());
 	if (Distance < ManifestRadius)
 	{
-		GhostCharacter->GetMesh()->SetHiddenInGame(true);
+		GhostCharacter->Multicast_SetVisible(true);
 	}
 
 	if (Distance < HuntRadius)
 	{
-		GhostCharacter->GetMesh()->SetHiddenInGame(false);
+		GhostCharacter->Multicast_SetVisible(false);
 
 		Cast<AGOCLEANCharacter>(TargetPlayerCharacter)->Server_RequestOnHunted();
 
@@ -249,4 +271,35 @@ void AGhostAIController::EndlessPlayerHunt()
 
 		if (bIsUnendingRageEvent) EndlessPlayerHunt();
 	}
+}
+
+void AGhostAIController::OnRep_IsChasing()
+{
+	AGhostBase* Ghost = Cast<AGhostBase>(GetPawn());
+	if (!Ghost) return;
+
+	if (bIsChasing)
+		Ghost->Multicast_PlayChaseSound();
+	else
+		Ghost->Multicast_StopChaseSound();
+}
+
+void AGhostAIController::OnRep_IsRageEvent()
+{
+	AGhostBase* Ghost = Cast<AGhostBase>(GetPawn());
+	if (!Ghost) return;
+
+	if (bIsRageEvent)
+		Ghost->Multicast_PlayRageSound();
+	else
+		Ghost->Multicast_StopRageSound();
+}
+
+void AGhostAIController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AGhostAIController, bIsPatrolling);
+	DOREPLIFETIME(AGhostAIController, bIsChasing);
+	DOREPLIFETIME(AGhostAIController, bIsRageEvent);
 }

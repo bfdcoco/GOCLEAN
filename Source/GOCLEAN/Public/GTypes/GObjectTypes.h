@@ -11,6 +11,7 @@ UENUM(BlueprintType)
 enum class EGFixedObjState : uint8 {
 	E_Static			UMETA(DisplayName = "Static - 정적"),
 	E_Used				UMETA(DisplayName = "Used - 사용중"),
+	E_Invisible			UMETA(DisplayName = "Invisible - 비가시적/비활성화"),
 	E_Destroyed			UMETA(DisplayName = "Destroyed - 파괴됨"),
 
 	E_MAX				UMETA(Hidden)
@@ -22,6 +23,7 @@ UENUM(BlueprintType)
 enum class ENonfixedObjState : uint8 {
 	E_Static			UMETA(DisplayName = "Static - 정적"),
 	E_Kinematic			UMETA(DisplayName = "Kinematic - 운동중"),
+	E_Picked			UMETA(DisplayName = "Picked - 플레이어가 들고 있음"),
 	E_Fixed				UMETA(DisplayName = "Fixed - 설치됨"),
 	E_Invisible			UMETA(DisplayName = "Invisible - 비가시적"),
 

@@ -64,6 +64,6 @@ public:
 
 
     // Editor //
-    void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) override;
+    void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent);
 
 };

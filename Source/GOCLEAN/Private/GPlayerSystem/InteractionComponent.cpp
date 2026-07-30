@@ -25,6 +25,7 @@ void UInteractionComponent::BeginPlay()
 void UInteractionComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
 	PerformLineTrace();
 }
 
@@ -41,7 +42,8 @@ void UInteractionComponent::PerformLineTrace()
 	FRotator Rotation;
 	Owner->GetActorEyesViewPoint(Start, Rotation);
 
-	FVector End = Start + (Rotation.Vector() * InteractionRange);
+	FVector End_Interaction = Start + (Rotation.Vector() * InteractionRange);
+	FVector End_Incinerator = Start + (Rotation.Vector() * InteractionRange);
 
 
 	// set raycast
@@ -49,15 +51,27 @@ void UInteractionComponent::PerformLineTrace()
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(Owner);
 
+
+	// shoot ray - Incinerator
+	bIsCheckingIncineratorZone = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End_Incinerator, EEC_GIncinerable, Params);
+	// DrawDebugLine(GetWorld(), Start, End_Incinerator, bIsCheckingIncineratorZone ? FColor::Green : FColor::Red, false, 0.1f, 0, 2.0f);
+
 	
-	// shoot ray
-	bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_GInteractable, Params);
-	DrawDebugLine(GetWorld(), Start, End, bHit ? FColor::Green : FColor::Red, false, 0.1f, 0, 2.0f);
+	// shoot ray - Interaction
+	bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End_Interaction, ECC_GInteractable, Params);
 	if (bHit)
 	{
 		AActor* HitActor = HitResult.GetActor();
 		if (!HitActor) return;
 
+		// 1. actor type
+		if (HitActor->Implements<UGInteractable>())
+		{
+			CurrentTarget = HitActor; // 액터 통째로 저장!
+			return;
+		}
+
+		// 2. actor component type
 		TArray<UActorComponent*> InteractComps =
 			HitActor->GetComponentsByInterface(UGInteractable::StaticClass());
 

@@ -2,13 +2,17 @@
 
 
 #include "GObjectSystem/GNonfixedObjCoreComponent.h"
+#include "GObjectSystem/GNonfixedObject.h"
+#include "../../GOCLEAN.h"
 
 #include "Net/UnrealNetwork.h"
 
 // Sets default values for this component's properties
 UGNonfixedObjCoreComponent::UGNonfixedObjCoreComponent()
 {
+	TID = "";
 	SetIsReplicatedByDefault(true);
+
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
@@ -29,7 +33,6 @@ void UGNonfixedObjCoreComponent::BeginPlay()
 	Super::BeginPlay();
 
 	// ...
-	
 }
 
 
@@ -52,8 +55,8 @@ bool UGNonfixedObjCoreComponent::CanInteract(FName EquipID, AGOCLEANCharacter* T
 
 void UGNonfixedObjCoreComponent::ExecuteInteraction(FName EquipID, AGOCLEANCharacter* Target)
 {
-	if (!GetOwner()->HasAuthority())
-		return;
+	//if (!GetOwner()->HasAuthority())
+	//	return;
 
 	InteractionCnt++;
 	// InteractionCnt에 따른 동작은 아래 델리게이트에서
@@ -71,6 +74,35 @@ void UGNonfixedObjCoreComponent::OnRep_InteractionCnt()
 void UGNonfixedObjCoreComponent::OnRep_State()
 {
 	// update visual
+	UE_LOG(LogGObject, Log, TEXT("Object State was change!: %s"), *UEnum::GetValueAsString(State));
+
+	AGNonfixedObject* Owner = Cast<AGNonfixedObject>(GetOwner());
+	if (Owner)
+	{
+		Owner->UpdatePhysicsByState();
+		Owner->UpdateVisualByState();
+	}
+}
+
+void UGNonfixedObjCoreComponent::OnRep_TID()
+{
+	// update visual
+	UE_LOG(LogGObject, Log, TEXT("Object State was change!: %s"), *TID.ToString());
+
+	AGNonfixedObject* Owner = Cast<AGNonfixedObject>(GetOwner());
+	if (Owner)
+	{
+		FGNonfixedObjData TempData{
+			IID,
+			TID,
+			Owner->GetActorLocation(),
+			Owner->GetActorRotation(),
+			ENonfixedObjState::E_Static,
+			true
+		};
+
+		Owner->SetObjectData(TempData);
+	}
 }
 
 
@@ -85,6 +117,7 @@ bool UGNonfixedObjCoreComponent::ChangeState(ENonfixedObjState ChangedState)
 	OnStateEnter(ChangedState);
 
 	OnNonfixedObjStateChanged.Broadcast(PrevState, ChangedState);
+	OnRep_State();
 
 	return true;
 }
@@ -97,24 +130,4 @@ void UGNonfixedObjCoreComponent::OnStateExit(ENonfixedObjState ExitedState)
 void UGNonfixedObjCoreComponent::OnStateEnter(ENonfixedObjState EnteredState)
 {
 	// 추후 OnfixedObjStateChanged 델리게이트를 Exit과 Enter로 분할
-	switch (EnteredState)
-	{
-	case ENonfixedObjState::E_Static:
-
-		break;
-	case ENonfixedObjState::E_Kinematic:
-		break;
-	case ENonfixedObjState::E_Fixed:
-		break;
-	case ENonfixedObjState::E_Invisible:
-		break;
-	case ENonfixedObjState::E_Disintegrating:
-		break;
-	case ENonfixedObjState::E_Destroyed:
-		break;
-	case ENonfixedObjState::E_Temporary:
-		break;
-	default:
-		break;
-	}
 }

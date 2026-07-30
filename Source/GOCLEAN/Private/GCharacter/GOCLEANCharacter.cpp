@@ -22,6 +22,11 @@
 #include "Net/UnrealNetwork.h"
 #include "GDataManagerSubsystem.h"
 #include "GTypes/DataTableRow/GEquipmentDataRow.h"
+#include "GTypes/DataTableRow/GObjectDataRow.h"
+#include "GCharacter/GOCLEANPlayerController.h"
+#include "GObjectSystem/GNonfixedObject.h"
+#include "GObjectSystem/GNonfixedObjCoreComponent.h"
+#include "../../GOCLEAN.h"
 
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -133,6 +138,12 @@ void AGOCLEANCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 		// Interact
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AGOCLEANCharacter::DoInteraction);
+
+
+		EnhancedInputComponent->BindAction(ChangeSlotAction_Slot1, ETriggerEvent::Started, this, &AGOCLEANCharacter::TryChangeCurrentEquipmentSlot0);
+		EnhancedInputComponent->BindAction(ChangeSlotAction_Slot2, ETriggerEvent::Started, this, &AGOCLEANCharacter::TryChangeCurrentEquipmentSlot1);
+		EnhancedInputComponent->BindAction(ChangeSlotAction_Slot3, ETriggerEvent::Started, this, &AGOCLEANCharacter::TryChangeCurrentEquipmentSlot2);
+		EnhancedInputComponent->BindAction(ChangeSlotAction_Slot4, ETriggerEvent::Started, this, &AGOCLEANCharacter::TryChangeCurrentEquipmentSlot3);
 	}
 	else
 	{
@@ -184,11 +195,21 @@ void AGOCLEANCharacter::Server_RequestPlayerInteractionAnim_Implementation()
 }
 void AGOCLEANCharacter::Server_RequestOnHunted_Implementation()
 {
-	Multicast_OnHunted();
+	if (HasAuthority()) OnHunted();
+	else Multicast_OnHunted();
 }
 void AGOCLEANCharacter::Server_RequestSetVisible_Implementation(bool IsVisible)
 {
 	Multicast_SetVisible(IsVisible);
+}
+void AGOCLEANCharacter::Server_RequestPlayHuntCameraSequence_Implementation()
+{
+	Multicast_PlayHuntCameraSequence();
+}
+void AGOCLEANCharacter::Server_RequestRespawn_Implementation()
+{
+	if (HasAuthority()) Respawn();
+	else Multicast_Respawn();
 }
 
 void AGOCLEANCharacter::Multicast_ToggleFlashlight_Implementation()
@@ -219,6 +240,42 @@ void AGOCLEANCharacter::Multicast_SetVisible_Implementation(bool IsVisible)
 {
 	ThirdPersonMeshComp->SetHiddenInGame(!IsVisible);
 }
+void AGOCLEANCharacter::Multicast_PlayHuntCameraSequence_Implementation()
+{
+	PlayHuntCameraSequence();
+}
+void AGOCLEANCharacter::Multicast_Respawn_Implementation()
+{
+	Respawn();
+}
+
+void AGOCLEANCharacter::Client_PlayHuntCameraSequence_Implementation()
+{
+	PlayHuntCameraSequence();
+}
+void AGOCLEANCharacter::Client_Respawn_Implementation()
+{
+	Respawn();
+}
+void AGOCLEANCharacter::Client_DisableInput_Implementation(bool bIsDisable)
+{
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+
+	if (bIsDisable)
+	{
+		PlayerController->SetIgnoreLookInput(true);
+		PlayerController->SetIgnoreMoveInput(true);
+		CameraComp->bUsePawnControlRotation = false;
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+	else
+	{
+		PlayerController->SetIgnoreLookInput(false);
+		PlayerController->SetIgnoreMoveInput(false);
+		CameraComp->bUsePawnControlRotation = true;
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	}
+}
 
 
 // OnHunted //
@@ -242,13 +299,9 @@ void AGOCLEANCharacter::OnHunted()
 		AnimationDuration = AnimAsset->GetPlayLength();
 	}
 
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	PlayerController->SetIgnoreLookInput(true);
-	PlayerController->SetIgnoreMoveInput(true);
-	CameraComp->bUsePawnControlRotation = false;
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Client_DisableInput(true);
 	
-	GetWorldTimerManager().SetTimer(DelayHandle, this, &AGOCLEANCharacter::PlayHuntCameraSequence, AnimationDuration - 1.3f, false);
+	GetWorldTimerManager().SetTimer(DelayHandle, this, &AGOCLEANCharacter::Client_PlayHuntCameraSequence, AnimationDuration - 1.3f, false);
 	GetWorldTimerManager().SetTimer(SpawnDummyDelayHandle, this, &AGOCLEANCharacter::SpawnDummyCharacter, AnimationDuration - 1.5f, false);
 	GetWorldTimerManager().SetTimer(DestroyHandle, [SpawnedDummyActor]() { SpawnedDummyActor->Destroy(); }, AnimationDuration + 0.5f, false);
 	
@@ -259,12 +312,8 @@ void AGOCLEANCharacter::Respawn()
 {
 	Server_RequestSetVisible(true);
 	FirstPersonMeshComp->SetHiddenInGame(false);
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	PlayerController->SetIgnoreLookInput(false);
-	PlayerController->SetIgnoreMoveInput(false);
-	CameraComp->bUsePawnControlRotation = true;
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-
+	
+	Client_DisableInput(false);
 
 	SetActorLocationAndRotation(RespawnTransform.GetLocation(), RespawnTransform.GetRotation());
 
@@ -300,7 +349,7 @@ void AGOCLEANCharacter::PlayHuntCameraSequence()
 	SequencePlayer->Play();
 	
 
-	SequencePlayer->OnFinished.AddDynamic(this, &AGOCLEANCharacter::Respawn);
+	SequencePlayer->OnFinished.AddDynamic(this, &AGOCLEANCharacter::Server_RequestRespawn);
 }
 
 void AGOCLEANCharacter::SpawnDummyCharacter()
@@ -451,38 +500,49 @@ void AGOCLEANCharacter::PlayerInteractionAnim()
 // Equipments & Interaction //
 void AGOCLEANCharacter::DoInteraction()
 {
-	if (!InteractionComp || !EquipComp) return;
-
-	// get equip id
-	FName EquipID = EquipComp->GetCurrentEquipmentID();
-
-
-	// change anim id to active-anim
-	UGDataManagerSubsystem* DataManager = GetGameInstance()->GetSubsystem<UGDataManagerSubsystem>();
-	const FGEquipmentDataRow* Data = DataManager->GetEquipmentData(EquipID);
-	if (!Data) return;
-
-	SetAnimID(Data->IdleToActivateAnimID_First);
-	// require rpc function
-	//		empty
-}
-
-void AGOCLEANCharacter::Server_TryInteraction(FName EquipID)
-{
-	UActorComponent* Target = InteractionComp->GetCurrentTarget();
-	if (Target)
+	AGOCLEANPlayerController* GController = Cast<AGOCLEANPlayerController>(GetController());
+	if (GController)
 	{
-		IGInteractable* Interactable = Cast<IGInteractable>(Target);
-		if (Interactable)
-		{
-			if (Interactable->CanInteract(EquipID, Cast<AGOCLEANCharacter>(Target)))
-			{
-				Interactable->ExecuteInteraction(EquipID, Cast<AGOCLEANCharacter>(Target));
-				UE_LOG(LogTemp, Log, TEXT("[GCharacter] Interaction Executed on %s"), *Target->GetOwner()->GetName());
-			}
-		}
+		GController->TryDoInteraction();
 	}
 }
+
+void AGOCLEANCharacter::TryChangeCurrentEquipmentSlot0()
+{
+	AGOCLEANPlayerController* GController = Cast<AGOCLEANPlayerController>(GetController());
+	if (GController)
+	{
+		GController->ChangeSlot(0);
+	}
+}
+
+void AGOCLEANCharacter::TryChangeCurrentEquipmentSlot1()
+{
+	AGOCLEANPlayerController* GController = Cast<AGOCLEANPlayerController>(GetController());
+	if (GController)
+	{
+		GController->ChangeSlot(1);
+	}
+}
+
+void AGOCLEANCharacter::TryChangeCurrentEquipmentSlot2()
+{
+	AGOCLEANPlayerController* GController = Cast<AGOCLEANPlayerController>(GetController());
+	if (GController)
+	{
+		GController->ChangeSlot(2);
+	}
+}
+
+void AGOCLEANCharacter::TryChangeCurrentEquipmentSlot3()
+{
+	AGOCLEANPlayerController* GController = Cast<AGOCLEANPlayerController>(GetController());
+	if (GController)
+	{
+		GController->ChangeSlot(3);
+	}
+}
+
 
 void AGOCLEANCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -494,3 +554,113 @@ void AGOCLEANCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(AGOCLEANCharacter, StatsComp);
 }
 
+void AGOCLEANCharacter::SetHeldObject(AGNonfixedObject* NewObj)
+{
+	if (!NewObj) return;
+
+	SetHeldObjectRelativeTransform(NewObj);
+	EquipComp->SetCurrentHeldObject(NewObj);
+}
+
+void AGOCLEANCharacter::SetHeldObjectRelativeTransform(AGNonfixedObject* NewObj)
+{
+	auto DataManager = GetWorld()->GetGameInstance()->GetSubsystem<UGDataManagerSubsystem>();
+	if (!DataManager) return;
+
+	auto ObjData = DataManager->GetObjectData(NewObj->GetNonfixedObjCoreComp()->TID);
+	if (!ObjData) return;
+
+	auto EquipData = DataManager->GetEquipmentData(ObjData->PickedEquipID);
+	if (!EquipData) return;
+
+
+	FAttachmentTransformRules AttachmentRules(
+		EAttachmentRule::SnapToTarget,
+		EAttachmentRule::SnapToTarget,
+		EAttachmentRule::SnapToTarget,
+		false
+	);
+
+	if (EquipData->EquipID == "Eq_OVariable")
+	{
+		NewObj->AttachToComponent(GetHandMesh(), AttachmentRules, TEXT("ForwardSocket"));
+
+		// 1. 오브젝트의 바운드 정보 가져오기 (메시 크기 측정)
+		FVector Origin, Extent;
+		// bOnlyCollidingComponents=false로 설정하여 시각적 메시를 포함한 전체 크기를 측정합니다.
+		NewObj->GetActorBounds(false, Origin, Extent);
+
+		// 2. 현재 월드 좌표계에서 피벗(Pivot)부터 최상단(Top)까지의 수직 거리 계산
+		float PivotWorldZ = NewObj->GetActorLocation().Z;
+		float TopWorldZ = Origin.Z + Extent.Z;
+		float PivotToTopHeight = TopWorldZ - PivotWorldZ;
+
+		// 3. 목표로 하는 '최상단' 위치 (소켓 기준 140.0f)
+		const float TargetTopZ = 140.0f;
+
+		// 4. 피벗이 위치해야 할 상대 Z값 계산
+		// (목표 높이에서 물체의 실제 높이만큼 아래로 내려줘야 최상단이 목표 지점에 딱 걸립니다.)
+		float AdjustedZ = TargetTopZ - PivotToTopHeight;
+
+		// X, Y는 기존 값을 유지하고 Z만 보정된 값을 사용합니다.
+		FVector CenterLocation = FVector(0.0f, 45.0f, AdjustedZ + 15.0f);
+		FRotator CenterRotation = FRotator::ZeroRotator;
+
+		if (NewObj->GetRootComponent())
+		{
+			NewObj->GetRootComponent()->SetRelativeTransform(FTransform(CenterRotation, CenterLocation));
+		}
+	}
+	else
+	{
+		NewObj->AttachToComponent(GetHandMesh(), AttachmentRules, TEXT("Charater001_Bip001-R-HandSocket"));
+
+		FRotator AnimRotation = EquipData->RelativeRotation_FirstPerson;
+		FVector AnimLocation = EquipData->RelativeLocation_FirstPerson;
+
+		FTransform AnimatorDesiredTransform(AnimRotation, AnimLocation);
+
+		FTransform ActualSocketTransform = GetHandMesh()->
+			GetSocketTransform(TEXT("Charater001_Bip001-R-HandSocket"), ERelativeTransformSpace::RTS_ParentBoneSpace);
+
+		FTransform FinalRelativeTransform = ActualSocketTransform.GetRelativeTransform(AnimatorDesiredTransform);
+
+		if (NewObj->GetRootComponent())
+		{
+			NewObj->GetRootComponent()->SetRelativeTransform(FinalRelativeTransform);
+		}
+	}
+
+	SetAnimID(EquipData->IdleAnimID_First);
+	OnRep_AnimID();
+	AnimState = EPlayerAnimState::Idle;
+}
+void AGOCLEANCharacter::DropHeldObject(int32 Index)
+{
+	if (!EquipComp) return;
+
+	// detach actor hierarchy
+	EquipComp->GetHeldObject(Index)->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+	// set empty current held obj ptr
+	EquipComp->ChangeHeldObject(Index, nullptr);
+
+	// set equip id - default
+	EquipComp->ChangeEquipment(Index, "Eq_Hand");
+
+
+	auto DataManager = GetWorld()->GetGameInstance()->GetSubsystem<UGDataManagerSubsystem>();
+	if (!DataManager) return;
+
+	auto EquipData = DataManager->GetEquipmentData("Eq_Hand");
+	if (!EquipData) return;
+
+	SetAnimID(EquipData->IdleAnimID_First);
+	OnRep_AnimID();
+	AnimState = EPlayerAnimState::Stand;
+}
+
+void AGOCLEANCharacter::OnRep_AnimID()
+{
+	PlayerInteractionAnim();
+}

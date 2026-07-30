@@ -76,7 +76,7 @@ struct FGZoneData
 
 	// player
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TArray<int32> IncludedPlayerList;
+	TArray<TObjectPtr<AActor>> IncludedPlayerList;
 
 
 	// ghost

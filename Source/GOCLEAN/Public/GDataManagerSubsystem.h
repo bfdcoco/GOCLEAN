@@ -24,11 +24,26 @@ class GOCLEAN_API UGDataManagerSubsystem : public UGameInstanceSubsystem
 
 
 public:
+	static UGDataManagerSubsystem* Get(const UObject* WorldContextObject)
+	{
+		if (UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
+		{
+			if (UGameInstance* GI = World->GetGameInstance())
+			{
+				return GI->GetSubsystem<UGDataManagerSubsystem>();
+			}
+		}
+		return nullptr;
+	}
+
+
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
 	const FGObjectDataRow* GetObjectData(FName ID) const;
 	const FGEquipmentDataRow* GetEquipmentData(FName ID) const;
 	const FGMapDataRow* GetMapData(FName TID) const;
+
+	const TArray<FGMapDataRow*> GetAllMapDatas() const;
 
 
 private:

@@ -32,7 +32,7 @@ public:
     TArray<TSoftObjectPtr<USkeletalMesh>> SK_MeshAssets;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
-    TArray<TSoftClassPtr<AActor>> DEC_MeshAssets;
+    TArray<TSubclassOf<class AActor>> DEC_MeshAssets;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visual")
     bool bUseBothHands;
@@ -66,5 +66,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Logic")
     int32 DerivedObjCnt;
+
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
+    TObjectPtr<USoundBase> InteractSoundAsset;
 
 };

@@ -102,6 +102,10 @@ public:
 	void Server_RequestOnHunted();
 	UFUNCTION(Server, Reliable)
 	void Server_RequestSetVisible(bool IsVisible);
+	UFUNCTION(Server, Reliable)
+	void Server_RequestPlayHuntCameraSequence();
+	UFUNCTION(Server, Reliable)
+	void Server_RequestRespawn();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_Crouch();
@@ -117,6 +121,17 @@ public:
 	void Multicast_PlayerInteractionAnim();
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_SetVisible(bool IsVisible);
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayHuntCameraSequence();
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_Respawn();
+
+	UFUNCTION(Client, Reliable)
+	void Client_PlayHuntCameraSequence();
+	UFUNCTION(Client, Reliable)
+	void Client_Respawn();
+	UFUNCTION(Client, Reliable)
+	void Client_DisableInput(bool bIsDisable);
 
 	// OnHunted //
 	void OnHunted();
@@ -231,9 +246,13 @@ private:
 	bool bIsSprinting;
 
 
-	// Equipments & Interaction //
-	UPROPERTY(VisibleAnywhere, Replicated)
+
+	// Anim ID //
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = "OnRep_AnimID")
 	int32 AnimID;
+
+	UFUNCTION()
+	void OnRep_AnimID();
 
 	UFUNCTION(BlueprintCallable)
 	void SetAnimID(int32 NewID) { AnimID = NewID; }
@@ -241,12 +260,25 @@ private:
 	UFUNCTION(BlueprintPure)
 	int32 GetAnimID() { return AnimID; }
 
+
+	// Equipment // 
 	UPROPERTY(VisibleAnywhere, Replicated)
 	TObjectPtr<UGEquipmentComponent> EquipComp;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input Actions")
-	TObjectPtr<UInputAction> ChangeSlotAction;
+	TObjectPtr<UInputAction> ChangeSlotAction_Slot1;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Input Actions")
+	TObjectPtr<UInputAction> ChangeSlotAction_Slot2;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input Actions")
+	TObjectPtr<UInputAction> ChangeSlotAction_Slot3;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input Actions")
+	TObjectPtr<UInputAction> ChangeSlotAction_Slot4;
+
+
+	// Interaction // 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UInteractionComponent> InteractionComp;
 
@@ -255,11 +287,22 @@ private:
 
 
 public:
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UGEquipmentComponent* GetEquipComp() const { return EquipComp; }
+	UInteractionComponent* GetInteractionComp() const { return InteractionComp; }
 
 	void DoInteraction();
+	void TryChangeCurrentEquipmentSlot0();
+	void TryChangeCurrentEquipmentSlot1();
+	void TryChangeCurrentEquipmentSlot2();
+	void TryChangeCurrentEquipmentSlot3();
 
-	// only Server
-	void Server_TryInteraction(FName EquipID);
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	void SetHeldObject(class AGNonfixedObject* NewObj);
+	void DropHeldObject(int32 Index);
+	USceneComponent* GetHandMesh() const { return FirstPersonMeshComp; }
+
+	void SetHeldObjectRelativeTransform(class AGNonfixedObject* NewObj);
 	
 };

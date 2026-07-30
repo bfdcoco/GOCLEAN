@@ -17,6 +17,7 @@
 #include "AIController.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Components/AudioComponent.h"
 #include "GhostBase.generated.h"
 
 //JSH FLAH AGHOSTAIController -> Revision: AGhostAIController
@@ -41,6 +42,49 @@ public:
 
 	int32 CurrentPatrolIndex;
 
+	
+	// Sound //
+	UPROPERTY()
+	TObjectPtr<UAudioComponent> RageLoopAudio;
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	TObjectPtr<USoundBase> RageCue;
+	UPROPERTY()
+	TObjectPtr<UAudioComponent> ChaseLoopAudio;
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	TObjectPtr<USoundBase> ChaseCue;
+	UPROPERTY()
+	TObjectPtr<UAudioComponent> OnHuntedLoopAudio;
+	UPROPERTY(EditDefaultsOnly, Category = "Audio")
+	TObjectPtr<USoundBase> OnHuntedCue;
+
+	void PlayRageSound();
+	void StopRageSound();
+	void PlayChaseSound();
+	void StopChaseSound();
+
+	// Rage
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayRageSound();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_StopRageSound();
+
+	// Chase
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayChaseSound();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_StopChaseSound();
+
+	// OnHunted
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayOnHuntedSound();
+	
+	// Server //
+	UFUNCTION(Server, Reliable)
+	void Server_RequestSetVisible(bool IsVisible);
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SetVisible(bool IsVisible);
 
 protected:
 	// Behaviors array //
@@ -65,7 +109,6 @@ protected:
 	void PerformBehaviorEvent();
 
 
-
 	// Player sanity //
 	float SanityCorruptionRate;
 
@@ -73,7 +116,6 @@ protected:
 	float BehaviorEventCycleDelay;
 	bool bCanSetBehaviourEventCycleTimer;
 	FTimerHandle GhostBehaviorCycleHandle;
-
 
 private:
 

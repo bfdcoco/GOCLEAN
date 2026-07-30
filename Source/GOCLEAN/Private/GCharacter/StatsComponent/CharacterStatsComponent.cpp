@@ -16,7 +16,7 @@ void UCharacterStatsComponent::BeginPlay()
 
 	// 시작 시 UI 초기 갱신(클라에서)
 	if (!GetOwner() || GetOwner()->HasAuthority()) return;
-
+	
 	OnLifeChanged.Broadcast(Life);
 	OnSanityChanged.Broadcast(CurrentSanity);
 	OnMoveSpeedChanged.Broadcast(DefaultSpeed);

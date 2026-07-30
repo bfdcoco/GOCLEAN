@@ -1,6 +1,8 @@
 #pragma once
 
 #define ECC_GInteractable ECC_GameTraceChannel2
+#define EEC_GIncinerator ECC_GameTraceChannel3
+#define EEC_GIncinerable ECC_GameTraceChannel4
 
 #include "CoreMinimal.h"
 

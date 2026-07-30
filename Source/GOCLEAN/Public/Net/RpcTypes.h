@@ -245,6 +245,7 @@ enum class EPlayerEvent_C2S : uint8
     RequestSetAnimState,         // 클라 입력에 따라 애니 상태 변경 요청    
     RequestSetHeldItem,          // 클라 입력에 따라 소지 아이템 변경 요청
     RequestPlayOneShot,          // 던지기/청소/아이템 사용 등 한 번 재생 요청
+    RequestChangeCurrentSlotIndex,  // 선택한 슬롯 변경 요청
 };
 
 UENUM(BlueprintType)
@@ -317,4 +318,76 @@ struct FPlayerPayload_S2C
     UPROPERTY(BlueprintReadWrite)
     float ParamFloat = 0.f;
 
+};
+
+
+UENUM(BlueprintType)
+enum class ECleaningEvent_C2S : uint8
+{
+    None = 0,
+
+    // 장비를 들고 특정 오브젝트에 사용 요청
+    // Payload: EquipmentTypeId(FName), TargetInstanceId(int32)
+    UseEquipmentOnObject,
+
+    // 아이템을 특정 오브젝트에 사용 요청 (소모형/설치형은 서버에서 분기)
+    // Payload: ItemId(int32), TargetInstanceId(int32)
+    UseItemOnObject,
+};
+
+UENUM(BlueprintType)
+enum class ECleaningRejectReason : uint8
+{
+    None = 0,
+    InvalidTarget,      // 대상 오브젝트 없음
+    OutOfRange,         // 거리 부족
+    NotAllowedState,    // 상호작용 불가 상태
+    Cooldown,           // 쿨타임
+    InvalidParam,       // 파라미터 누락/이상
+};
+
+USTRUCT(BlueprintType)
+struct FCleaningPayload_C2S
+{
+    GENERATED_BODY()
+
+    // 상호작용 대상 오브젝트 인스턴스 ID
+    UPROPERTY(BlueprintReadWrite)
+    int32 TargetInstanceId = INDEX_NONE;
+
+    // 장비 타입 ID (장비 사용일 때만 사용)
+    UPROPERTY(BlueprintReadWrite)
+    FName EquipmentTypeId = NAME_None;
+
+    // 아이템 ID (아이템 사용일 때만 사용)
+    UPROPERTY(BlueprintReadWrite)
+    int32 ItemId = 0;
+
+    UPROPERTY(BlueprintReadWrite)
+    int32 ParamInt = 0;
+
+    UPROPERTY(BlueprintReadWrite)
+    float ParamFloat = 0.f;
+};
+
+// 서버에서 거절 요청 보낼때
+USTRUCT(BlueprintType)
+struct FCleaningPayload_S2C
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadWrite)
+    int32 PlayerIndex = -1;
+
+    UPROPERTY(BlueprintReadWrite)
+    int32 TargetInstanceId = INDEX_NONE;
+
+    UPROPERTY(BlueprintReadWrite)
+    ECleaningRejectReason RejectReason = ECleaningRejectReason::None;
+
+    UPROPERTY(BlueprintReadWrite)
+    int32 ParamInt = 0;
+
+    UPROPERTY(BlueprintReadWrite)
+    float ParamFloat = 0.f;
 };

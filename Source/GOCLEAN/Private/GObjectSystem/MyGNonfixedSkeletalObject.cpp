@@ -86,16 +86,16 @@ void AGNonfixedSkeletalObject::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	FString str = (RootPrimitive->IsSimulatingPhysics()) ? TEXT("Sim ON") : TEXT("Sim OFF");
-	UKismetSystemLibrary::PrintString(GetWorld(), str, true, true, FLinearColor::Green, 2.0f);
+	//FString str = (RootPrimitive->IsSimulatingPhysics()) ? TEXT("Sim ON") : TEXT("Sim OFF");
+	//UKismetSystemLibrary::PrintString(GetWorld(), str, true, true, FLinearColor::Green, 2.0f);
 
-	if (HasAuthority())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Server Tick"));
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Client Tick"));
-	}
+	//if (HasAuthority())
+	//{
+	//	UE_LOG(LogTemp, Warning, TEXT("Server Tick"));
+	//}
+	//else
+	//{
+	//	UE_LOG(LogTemp, Warning, TEXT("Client Tick"));
+	//}
 }
 

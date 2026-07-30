@@ -14,9 +14,18 @@ AGhostBase::AGhostBase()
 	StatsComp = CreateDefaultSubobject<UGhostStatsComponent>(TEXT("GhostStats"));
 
 	// Default variables
-	BehaviorEventCycleDelay = 3.0f;
+	BehaviorEventCycleDelay = 12.0f;
 	bCanSetBehaviourEventCycleTimer = true;
 	CurrentPatrolIndex = 0;
+
+	// Sound setup
+	RageLoopAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("RageAudio"));
+	RageLoopAudio->SetupAttachment(GetRootComponent());
+	RageLoopAudio->bAutoActivate = false;
+
+	ChaseLoopAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("ChaseAudio"));
+	ChaseLoopAudio->SetupAttachment(GetRootComponent());
+	ChaseLoopAudio->bAutoActivate = false;
 }
 
 
@@ -39,6 +48,88 @@ void AGhostBase::BeginPlay()
 
 	// Init default value
 	GetCharacterMovement()->MaxWalkSpeed = StatsComp->GetMoveSpeed();
+
+	// Sound
+	if (RageLoopAudio && RageCue)
+	{
+		RageLoopAudio->SetSound(RageCue);
+	}
+
+	if (ChaseLoopAudio && ChaseCue)
+	{
+		ChaseLoopAudio->SetSound(ChaseCue);
+	}
+}
+
+void AGhostBase::PlayRageSound()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Rage Play"));
+
+	RageLoopAudio->Play();
+}
+
+void AGhostBase::StopRageSound()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Stop"));
+
+	RageLoopAudio->FadeOut(0.5f, 0.f);
+}
+void AGhostBase::PlayChaseSound()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Rage Play"));
+
+	ChaseLoopAudio->Play();
+}
+
+void AGhostBase::StopChaseSound()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Stop"));
+	ChaseLoopAudio->FadeOut(0.5f, 0.f);
+}
+
+void AGhostBase::Multicast_PlayRageSound_Implementation()
+{
+	if (RageLoopAudio && !RageLoopAudio->IsPlaying())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Multicast Rage Play"));
+		RageLoopAudio->Play();
+	}
+}
+
+void AGhostBase::Multicast_StopRageSound_Implementation()
+{
+	if (RageLoopAudio && RageLoopAudio->IsPlaying())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Multicast Rage Stop"));
+		RageLoopAudio->FadeOut(2.0f, 0.f);
+	}
+}
+
+void AGhostBase::Multicast_PlayChaseSound_Implementation()
+{
+	if (ChaseLoopAudio && !ChaseLoopAudio->IsPlaying())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Multicast Chase Play"));
+		ChaseLoopAudio->Play();
+	}
+}
+
+void AGhostBase::Multicast_StopChaseSound_Implementation()
+{
+	if (ChaseLoopAudio && ChaseLoopAudio->IsPlaying())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Multicast Chase Stop"));
+		ChaseLoopAudio->FadeOut(2.0f, 0.f);
+	}
+}
+
+void AGhostBase::Multicast_PlayOnHuntedSound_Implementation()
+{
+	UGameplayStatics::PlaySoundAtLocation(
+		this,
+		OnHuntedCue,
+		GetActorLocation()
+	);
 }
 
 void AGhostBase::Tick(float DeltaTime)
@@ -54,11 +145,11 @@ void AGhostBase::CheckBehaviorEventCondition()
 {
 	if (GhostAIController == nullptr) return;
 
-	if (GhostAIController->GetPlayerSanityCorruptionRate() >= 10 && bCanSetBehaviourEventCycleTimer) {
+	if (GhostAIController->GetPlayerSanityCorruptionRate() >= 500 && bCanSetBehaviourEventCycleTimer) {
 		GetWorldTimerManager().SetTimer(GhostBehaviorCycleHandle, this, &AGhostBase::PerformBehaviorEvent, BehaviorEventCycleDelay, true);
 		bCanSetBehaviourEventCycleTimer = false;
 	}
-	else if (GhostAIController->GetPlayerSanityCorruptionRate() < 10 && !bCanSetBehaviourEventCycleTimer) {
+	else if (GhostAIController->GetPlayerSanityCorruptionRate() < 500 && !bCanSetBehaviourEventCycleTimer) {
 		GetWorldTimerManager().ClearTimer(GhostBehaviorCycleHandle);
 		bCanSetBehaviourEventCycleTimer = true;
 	}
@@ -100,4 +191,15 @@ void AGhostBase::PerformBehaviorEvent()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Stop]"));
 	}
+}
+
+
+// Server //
+void AGhostBase::Server_RequestSetVisible_Implementation(bool IsVisible)
+{
+	Multicast_SetVisible(IsVisible);
+}
+void AGhostBase::Multicast_SetVisible_Implementation(bool IsVisible)
+{
+	GetMesh()->SetHiddenInGame(!IsVisible);
 }

@@ -31,5 +31,6 @@ public:
 private:
     void Handle_RequestSetAnimState(APlayerController* PC, const FPlayerPayload_C2S& Payload);
     void Handle_RequestSetHeldItem(APlayerController* PC, const FPlayerPayload_C2S& Payload);
+    void Handle_RequestChangeCurrentSlotIndex(APlayerController* PC, const FPlayerPayload_C2S& Payload);
 	
 };
