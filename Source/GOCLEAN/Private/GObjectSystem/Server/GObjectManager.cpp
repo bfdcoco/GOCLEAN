@@ -909,7 +909,7 @@ void UGObjectManager::RestoreBigWasteObject(int32 IID)
 
     if (Data && GameState)
     {
-        GameState->AddSpiritualGauge(Data->Pollution);
+        // GameState->AddSpiritualGauge(Data->Pollution);
     }
 }
 
