@@ -109,6 +109,27 @@ void AGOCLEANCharacter::Tick(float DeltaTime)
 	}
 
 	StatsComp->DecreaseCurrentSanity(StatsComp->GetSanityDrainRate() * DeltaTime);
+
+	// AimPitch adjustment
+	if (IsLocallyControlled())
+	{
+		float LocalAimPitch = FRotator::NormalizeAxis(GetControlRotation().Pitch);
+		LocalAimPitch = FMath::Clamp(LocalAimPitch, -60.f, 60.f);
+
+		if (FMath::Abs(LocalAimPitch - LastSentAimPitch) > 1.0f)
+		{
+			if (HasAuthority())
+			{
+				AimPitch = LocalAimPitch;
+			}
+			else
+			{
+				Server_SetAimPitch(LocalAimPitch);
+			}
+
+			LastSentAimPitch = LocalAimPitch;
+		}
+	}
 }
 
 void AGOCLEANCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -468,6 +489,9 @@ void AGOCLEANCharacter::RecoverStamina()
 void AGOCLEANCharacter::ToggleFlashlight()
 {
 	FlashlightComp->ToggleVisibility();
+
+	//JSH Tmp: Animation develop WIP
+	PlayerInteractionAnim();
 }
 
 // Animation //
@@ -475,13 +499,14 @@ void AGOCLEANCharacter::PlayerInteractionAnim()
 {
 	if (FirstPersonAnimDataTable == nullptr || ThirdPersonManAnimDataTable == nullptr || ThirdPersonWomanAnimDataTable == nullptr) return;
 	
-	const FAnimationData* FirstPersonAnimRow = FirstPersonAnimDataTable->FindRow<FAnimationData>(FName(*FString::FromInt(GetAnimID())), TEXT(""));
+	//JSH TMP: Animation develop WIP | GetAnimID()->102
+	const FAnimationData* FirstPersonAnimRow = FirstPersonAnimDataTable->FindRow<FAnimationData>(FName(*FString::FromInt(102)), TEXT(""));
 
 	if (FirstPersonAnimRow == nullptr) return;
 
 	if (Gender == 0)
 	{
-		const FAnimationData* ThirdPersonAnimRow = ThirdPersonManAnimDataTable->FindRow<FAnimationData>(FName(*FString::FromInt(GetAnimID())), TEXT(""));
+		const FAnimationData* ThirdPersonAnimRow = ThirdPersonManAnimDataTable->FindRow<FAnimationData>(FName(*FString::FromInt(102)), TEXT(""));
 
 		if (FirstPersonAnimRow->Montage == nullptr || ThirdPersonAnimRow == nullptr) return;
 		FirstPersonMeshComp->GetAnimInstance()->Montage_Play(FirstPersonAnimRow->Montage);
@@ -489,7 +514,7 @@ void AGOCLEANCharacter::PlayerInteractionAnim()
 	}
 	else if (Gender == 1)
 	{
-		const FAnimationData* ThirdPersonAnimRow = ThirdPersonWomanAnimDataTable->FindRow<FAnimationData>(FName(*FString::FromInt(GetAnimID())), TEXT(""));
+		const FAnimationData* ThirdPersonAnimRow = ThirdPersonWomanAnimDataTable->FindRow<FAnimationData>(FName(*FString::FromInt(102)), TEXT(""));
 
 		if (FirstPersonAnimRow->Montage == nullptr || ThirdPersonAnimRow == nullptr) return;
 		FirstPersonMeshComp->GetAnimInstance()->Montage_Play(FirstPersonAnimRow->Montage);
@@ -552,6 +577,8 @@ void AGOCLEANCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(AGOCLEANCharacter, AnimID);
 	DOREPLIFETIME(AGOCLEANCharacter, AnimState);
 	DOREPLIFETIME(AGOCLEANCharacter, StatsComp);
+
+	DOREPLIFETIME(AGOCLEANCharacter, AimPitch);
 }
 
 void AGOCLEANCharacter::SetHeldObject(AGNonfixedObject* NewObj)
@@ -663,4 +690,14 @@ void AGOCLEANCharacter::DropHeldObject(int32 Index)
 void AGOCLEANCharacter::OnRep_AnimID()
 {
 	PlayerInteractionAnim();
+}
+
+float AGOCLEANCharacter::GetAimPitch() const
+{
+	return AimPitch;
+}
+
+void AGOCLEANCharacter::Server_SetAimPitch_Implementation(float NewPitch)
+{
+	AimPitch = FMath::Clamp(NewPitch, -60.f, 60.f);
 }
