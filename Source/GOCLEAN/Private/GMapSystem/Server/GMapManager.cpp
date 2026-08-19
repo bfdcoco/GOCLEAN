@@ -44,6 +44,7 @@ void UGMapManager::Initialize(FSubsystemCollectionBase& Collection)
 
 				NewZoneData.ZID = ZoneName;
 				NewZoneData.Type = Data->Type;
+				NewZoneData.Attribute = Data->Attribute;
 
 				ZoneDatas.Add(ZoneName, NewZoneData);
 			}
