@@ -132,3 +132,19 @@ TArray<FName> UGMapManager::GetActorZoneIds(const AActor* Actor) const
 	}
 	return Out;
 }
+
+
+const TArray<FGZoneData> UGMapManager::GetZoneDatasByAttribute(EGZoneAttribute ZoneAttribute) const
+{
+	TArray<FGZoneData> TargetZones;
+
+	for (const TPair<FName, FGZoneData>& Pair : ZoneDatas)
+	{
+		const FGZoneData& Data = Pair.Value;
+		if (Data.Attribute != ZoneAttribute) continue;
+
+		TargetZones.Add(Data);
+	}
+
+	return TargetZones;
+}
