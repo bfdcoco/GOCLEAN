@@ -14,7 +14,7 @@ AGhostBase::AGhostBase()
 	StatsComp = CreateDefaultSubobject<UGhostStatsComponent>(TEXT("GhostStats"));
 
 	// Default variables
-	BehaviorEventCycleDelay = 12.0f;
+	BehaviorEventCycleDelay = 15.0f;
 	bCanSetBehaviourEventCycleTimer = true;
 	CurrentPatrolIndex = 0;
 
@@ -47,7 +47,11 @@ void AGhostBase::BeginPlay()
 	CommonBehaviors.Add(NewObject<UPlayFootstepSound>(this));
 
 	// Init default value
-	GetCharacterMovement()->MaxWalkSpeed = StatsComp->GetMoveSpeed();
+	GetCharacterMovement()->MaxWalkSpeed = StatsComp->GetBaseMovementSpeed();
+	// StatsComp->InitActivityLevel();
+
+	// Init BehaviorEventCycle
+	GetWorldTimerManager().SetTimer(GhostBehaviorEventCycleHandle, this, &AGhostBase::EvaluateBehaviorEventCondition, BehaviorEventCycleDelay, true);
 
 	// Sound
 	if (RageLoopAudio && RageCue)
@@ -59,6 +63,16 @@ void AGhostBase::BeginPlay()
 	{
 		ChaseLoopAudio->SetSound(ChaseCue);
 	}
+}
+
+int32 AGhostBase::GetRageModifier()
+{
+	return StatsComp->GetRageModifier();
+}
+
+float AGhostBase::GetRageCooldown()
+{
+	return StatsComp->GetRageCooldown();
 }
 
 void AGhostBase::PlayRageSound()
@@ -135,24 +149,16 @@ void AGhostBase::Multicast_PlayOnHuntedSound_Implementation()
 void AGhostBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
-	CheckBehaviorEventCondition();
 }
 
 
 // Behavior event //
-void AGhostBase::CheckBehaviorEventCondition()
+void AGhostBase::EvaluateBehaviorEventCondition()
 {
 	if (GhostAIController == nullptr) return;
 
-	if (GhostAIController->GetPlayerSanityCorruptionRate() >= 500 && bCanSetBehaviourEventCycleTimer) {
-		GetWorldTimerManager().SetTimer(GhostBehaviorCycleHandle, this, &AGhostBase::PerformBehaviorEvent, BehaviorEventCycleDelay, true);
-		bCanSetBehaviourEventCycleTimer = false;
-	}
-	else if (GhostAIController->GetPlayerSanityCorruptionRate() < 500 && !bCanSetBehaviourEventCycleTimer) {
-		GetWorldTimerManager().ClearTimer(GhostBehaviorCycleHandle);
-		bCanSetBehaviourEventCycleTimer = true;
-	}
+	if (GhostAIController->CheckBehaviorEventCondition()) 
+		PerformBehaviorEvent();
 	else return;
 }
 

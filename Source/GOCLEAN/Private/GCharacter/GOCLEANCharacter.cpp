@@ -88,7 +88,8 @@ void AGOCLEANCharacter::SetPlayerCurrentSanity(float NewPlayerCurrentSanity) {
 	if (StatsComp == nullptr) return;
 	StatsComp->SetCurrentSanity(NewPlayerCurrentSanity);
 }
-
+int32 AGOCLEANCharacter::GetPlayerCurrentLife() const { return StatsComp->GetCurrentLife(); }
+void AGOCLEANCharacter::DecreaseLife(int32 Amount) { StatsComp->DecreaseLife(Amount); };
 
 // Overrided //
 void AGOCLEANCharacter::Tick(float DeltaTime)
@@ -339,6 +340,7 @@ void AGOCLEANCharacter::Respawn()
 	SetActorLocationAndRotation(RespawnTransform.GetLocation(), RespawnTransform.GetRotation());
 
 	StatsComp->DecreaseLife(1);
+	if (GetPlayerCurrentLife() > 0) SetPlayerCurrentSanity(100.0f);
 	StatsComp->ResetStats();
 }
 

@@ -20,7 +20,6 @@
 #include "Components/AudioComponent.h"
 #include "GhostBase.generated.h"
 
-//JSH FLAH AGHOSTAIController -> Revision: AGhostAIController
 class AGhostAIController;
 class UCommonBehavior;
 class UEvidenceBehavior;
@@ -56,6 +55,9 @@ public:
 	TObjectPtr<UAudioComponent> OnHuntedLoopAudio;
 	UPROPERTY(EditDefaultsOnly, Category = "Audio")
 	TObjectPtr<USoundBase> OnHuntedCue;
+
+	int32 GetRageModifier();
+	float GetRageCooldown();
 
 	void PlayRageSound();
 	void StopRageSound();
@@ -105,7 +107,7 @@ protected:
 	void Tick(float DeltaTime) override;
 
 	// Behavior event //
-	void CheckBehaviorEventCondition();
+	void EvaluateBehaviorEventCondition();
 	void PerformBehaviorEvent();
 
 
@@ -115,7 +117,7 @@ protected:
 	// Behavior event //
 	float BehaviorEventCycleDelay;
 	bool bCanSetBehaviourEventCycleTimer;
-	FTimerHandle GhostBehaviorCycleHandle;
+	FTimerHandle GhostBehaviorEventCycleHandle;
 
 private:
 

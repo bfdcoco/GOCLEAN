@@ -46,7 +46,7 @@ void UCharacterStatsComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 
 // Getter, Setter //
-int UCharacterStatsComponent::GetCurrentLife() const { return Life; };
+int32 UCharacterStatsComponent::GetCurrentLife() const { return Life; };
 void UCharacterStatsComponent::DecreaseLife(int32 Amount) { Life -= Amount; }
 
 float UCharacterStatsComponent::GetCurrentSanity() const { return CurrentSanity; }

@@ -4,10 +4,10 @@
 
 
 // Getter //
-float AGhostAIController::GetPlayerSanityCorruptionRate() const { return PlayersSanityCorruptionRate; };
+//float AGhostAIController::GetPlayerSanityCorruptionRate() const { return PlayersSanityCorruptionRate; };
 
 // Server //
-void AGhostAIController::UpdatePlayerList()
+void AGhostAIController::UpdateAlivePlayerList()
 {
 	if (HasAuthority() == false) return;
 	
@@ -26,6 +26,8 @@ void AGhostAIController::UpdatePlayerList()
 
 		AGOCLEANCharacter* PlayerCharacter = Cast<AGOCLEANCharacter>(PlayerPawn);
 		if (PlayerCharacter == nullptr) continue;
+
+		if (PlayerCharacter->GetPlayerCurrentLife() <= 0) continue;
 
 		AlivePlayers.Add(PlayerCharacter);
 	}
@@ -57,12 +59,42 @@ float AGhostAIController::CalculateAverageSanityCorruptionRate()
 	return (TotalSanityCorruption / AlivePlayers.Num());
 }
 
+void AGhostAIController::CalculateAveragePlayerSanity()
+{
+	if (AlivePlayers.Num() == 0) return;
+
+	int32 TotalPlayerSanity = 0;
+
+	for(AGOCLEANCharacter* PlayerCharacter : AlivePlayers)
+	{
+		if (PlayerCharacter == nullptr) continue;
+
+		TotalPlayerSanity += PlayerCharacter->GetPlayerCurrentSanity();
+	}
+
+	AveragePlayerSanity = static_cast<int>(TotalPlayerSanity / AlivePlayers.Num());
+}
+
+bool AGhostAIController::CheckBehaviorEventCondition()
+{
+	CalculateAveragePlayerSanity();
+	int32 EventValue = FMath::RandRange(0, MaxEventValueRange);
+	int32 BehaviorCheckValue = AveragePlayerSanity + ActivityLevel + ActivityLevelModifier;
+
+	if (BehaviorCheckValue <= 70 && EventValue == 15) return true;
+	else return false;
+}
+
+void AGhostAIController::InitActivityLevel()
+{
+	ActivityLevel = FMath::RandRange(0, 5);
+}
+
 // Overrided //
 void AGhostAIController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// JSH TMP
 	MoveToPatrolPoint();
 }
 
@@ -70,15 +102,15 @@ void AGhostAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if(!bIsRageEvent) 
-		CheckRageEventCondition();
+	/*if(!bIsRageEvent) 
+		CheckRageEventCondition();*/
 }
 
 void AGhostAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	GetWorld()->GetTimerManager().SetTimer(CheckPlayerSanityCorruptionHandle, this, &AGhostAIController::CheckPlayerSanityCorruptionRate, 5.0f, true);
+	//GetWorld()->GetTimerManager().SetTimer(CheckPlayerSanityCorruptionHandle, this, &AGhostAIController::CheckPlayerSanityCorruptionRate, 5.0f, true);
 
 	bIsRageEvent = false;
 	bIsChasing = false;
@@ -87,22 +119,27 @@ void AGhostAIController::OnPossess(APawn* InPawn)
 	ManifestRadius = 500.0f;
 	HuntRadius = 150.0f;
 	
-	UpdatePlayerList();
+	UpdateAlivePlayerList();
 
-	//MoveToPatrolPoint();
+	MaxEventValueRange = 100;
+	InitActivityLevel();
+	ActivityLevelModifier = 0;
+	bCanRageEvent = true;
+
+	GetWorld()->GetTimerManager().SetTimer(CheckRageEventConditionHandle, this, &AGhostAIController::CheckRageEventCondition, 10.0f, true);
 }
 
 
 // Check player sanity //
-void AGhostAIController::CheckPlayerSanityCorruptionRate()
-{
-	PlayersSanityCorruptionRate = CalculateAverageSanityCorruptionRate();
-	UpdatePlayerList();
-	// JSH Flag: Sanity
-	UE_LOG(LogTemp, Warning, TEXT("Player's current sanity corruption rate: %f"), (PlayersSanityCorruptionRate));
-
-	//PlayerSanityCorruptionRate = (100.0f - Player->GetPlayerCurrentSanity());
-}
+//void AGhostAIController::CheckPlayerSanityCorruptionRate()
+//{
+//	PlayersSanityCorruptionRate = CalculateAverageSanityCorruptionRate();
+//	UpdatePlayerList();
+//	// JSH Flag: Sanity
+//	UE_LOG(LogTemp, Warning, TEXT("Player's current sanity corruption rate: %f"), (PlayersSanityCorruptionRate));
+//
+//	//PlayerSanityCorruptionRate = (100.0f - Player->GetPlayerCurrentSanity());
+//}
 
 
 // State //
@@ -142,12 +179,46 @@ void AGhostAIController::CheckArrivalCurrentPatrolPoint()
 
 void AGhostAIController::CheckRageEventCondition()
 {
-	if (PlayersSanityCorruptionRate >= 1000 && !bIsRageEvent) {
-		Cast<AGhostBase>(GetPawn())->Multicast_PlayRageSound();
-		bIsRageEvent = true;
-		StartChase();
+	if (bIsRageEvent || bCanRageEvent == false || bIsUnendingRageEvent) return;
+
+	CalculateAveragePlayerSanity();
+	if (AveragePlayerSanity >= 80) return;
+
+	if ((FMath::RandRange(0, 1) == 1))
+	{
+		AGhostBase* GhostCharacter = Cast<AGhostBase>(GetPawn());
+		if (GhostCharacter == nullptr) return;
+
+		const int32 Insanity = 100 - AveragePlayerSanity;
+		const int32 RageCheckValue = Insanity + GhostCharacter->GetRageModifier();
+
+		if (RageCheckValue >= 75)
+		{
+			if (FMath::RandRange(0, 2) == 1)
+			{
+				Cast<AGhostBase>(GetPawn())->Multicast_PlayRageSound();
+				bIsRageEvent = true;
+				bCanRageEvent = false;
+				StartChase();
+			}
+		}
+		else if ((40 <= RageCheckValue) && (RageCheckValue < 75))
+		{
+			if (FMath::RandRange(0, 4) == 1)
+			{
+				Cast<AGhostBase>(GetPawn())->Multicast_PlayRageSound();
+				bIsRageEvent = true;
+				bCanRageEvent = false;
+				StartChase();
+			}
+		}
+		else
+		{
+			return;
+		}
 	}
-	else return;
+
+	return;
 }
 
 void AGhostAIController::StartUnendingRageEvent()
@@ -158,7 +229,7 @@ void AGhostAIController::StartUnendingRageEvent()
 
 void AGhostAIController::StartChase()
 {
-	UpdatePlayerList();
+	UpdateAlivePlayerList();
 	bIsChasing = true;
 	bIsPatrolling = false;
 
@@ -211,10 +282,9 @@ void AGhostAIController::PlayerHunt()
 		bIsRageEvent = false;
 		bIsChasing = false;
 		bIsPatrolling = true;
-		PlayersSanityCorruptionRate = 0;
+		//PlayersSanityCorruptionRate = 0;
 
-		// JSH Temp: Player sanity reset
-		TargetPlayer->SetPlayerCurrentSanity(100.0f);
+		GetWorld()->GetTimerManager().SetTimer(EnableRageEventTriggerHandle, this, &AGhostAIController::EnableRageTrigger, GhostCharacter->GetRageCooldown(), false);
 
 		MoveToPatrolPoint();
 	}

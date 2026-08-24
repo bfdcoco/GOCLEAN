@@ -71,6 +71,8 @@ public:
 	UFUNCTION(BlueprintPure)
 	bool IsSprinting() const { return bIsSprinting; }
 
+	int32 GetPlayerCurrentLife() const;
+	void DecreaseLife(int32 Amount);
 	float GetPlayerCurrentSanity() const;
 	void SetPlayerCurrentSanity(float NewPlayerCurrentSanity);
 
