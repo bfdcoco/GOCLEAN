@@ -9,28 +9,26 @@
 // Server //
 void AGhostAIController::UpdateAlivePlayerList()
 {
-	if (HasAuthority() == false) return;
+	if (!HasAuthority()) return;
 	
 	AlivePlayers.Empty();
 
-	AGameSessionState* SessionState = Cast<AGameSessionState>(GetWorld()->GetGameState());
-	if (SessionState == nullptr) return;
-
-	UE_LOG(LogTemp, Warning, TEXT("AlivePlayers Num: %d"), AlivePlayers.Num());
-	for (APlayerState* PS : SessionState->PlayerArray)
+	AGameSessionState* GSS = Cast<AGameSessionState>(GetWorld()->GetGameState());
+	if (GSS == nullptr) return;
+	
+	for (APlayerState* PS : GSS->PlayerArray)
 	{
-		int32 SeatIndex = SessionState->GetSeatIndexOfPlayerState(PS);
+		APlayerSessionState* PSS = Cast<APlayerSessionState>(PS);
+		if (PSS == nullptr) continue;
 
-		APawn* PlayerPawn = SessionState->GetPawnBySeat(SeatIndex);
-		if (PlayerPawn == nullptr) continue;
+		if (!PSS->IsAlive()) continue;
 
-		AGOCLEANCharacter* PlayerCharacter = Cast<AGOCLEANCharacter>(PlayerPawn);
+		AGOCLEANCharacter* PlayerCharacter = Cast<AGOCLEANCharacter>(PS->GetPawn());
 		if (PlayerCharacter == nullptr) continue;
-
-		if (PlayerCharacter->GetPlayerCurrentLife() <= 0) continue;
 
 		AlivePlayers.Add(PlayerCharacter);
 	}
+	UE_LOG(LogTemp, Warning, TEXT("AlivePlayers Num: %d"), AlivePlayers.Num());
 }
 
 void AGhostAIController::FindTarget()
@@ -44,6 +42,7 @@ void AGhostAIController::FindTarget()
 
 float AGhostAIController::CalculateAverageSanityCorruptionRate()
 {
+	UpdateAlivePlayerList();
 	if (AlivePlayers.Num() == 0) return 0.f;
 
 	float TotalSanityCorruption = 0.f;
@@ -61,6 +60,7 @@ float AGhostAIController::CalculateAverageSanityCorruptionRate()
 
 void AGhostAIController::CalculateAveragePlayerSanity()
 {
+	UpdateAlivePlayerList();
 	if (AlivePlayers.Num() == 0) return;
 
 	int32 TotalPlayerSanity = 0;
@@ -101,7 +101,7 @@ void AGhostAIController::BeginPlay()
 void AGhostAIController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	//UE_LOG(LogTemp, Warning, TEXT("AlivePlayers Num: %d"), AlivePlayers.Num());
 	/*if(!bIsRageEvent) 
 		CheckRageEventCondition();*/
 }
@@ -182,6 +182,8 @@ void AGhostAIController::CheckRageEventCondition()
 	if (bIsRageEvent || bCanRageEvent == false || bIsUnendingRageEvent) return;
 
 	CalculateAveragePlayerSanity();
+	UE_LOG(LogTemp, Warning, TEXT("AveragePlayerSanity : %d"), AveragePlayerSanity);
+
 	if (AveragePlayerSanity >= 80) return;
 
 	if ((FMath::RandRange(0, 1) == 1))
@@ -280,6 +282,7 @@ void AGhostAIController::PlayerHunt()
 
 		GetWorld()->GetTimerManager().ClearTimer(ChasingPlayerHandle);
 		bIsRageEvent = false;
+		bCanRageEvent = true;
 		bIsChasing = false;
 		bIsPatrolling = true;
 		//PlayersSanityCorruptionRate = 0;

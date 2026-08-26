@@ -75,6 +75,7 @@ public:
 	void DecreaseLife(int32 Amount);
 	float GetPlayerCurrentSanity() const;
 	void SetPlayerCurrentSanity(float NewPlayerCurrentSanity);
+	void SetCanToggleFlashlight(bool bCanToggle) { bCanToggleFlashlight = bCanToggle; }
 
 	UPROPERTY(Replicated)
 	EPlayerAnimState AnimState;
@@ -208,6 +209,9 @@ private:
 	// Level sequence //
 	UPROPERTY(EditAnywhere, Category="Camera sequence")
 	TObjectPtr<ULevelSequence> HuntCameraSequence;
+
+	UPROPERTY(Replicated)
+	bool bCanToggleFlashlight = true;
 
 
 	// Respawn //

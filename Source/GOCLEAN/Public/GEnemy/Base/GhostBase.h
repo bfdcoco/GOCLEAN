@@ -41,6 +41,7 @@ public:
 
 	int32 CurrentPatrolIndex;
 
+	TSubclassOf<AActor>GetManifestActorClass() { return ManifestActorClass; }
 	
 	// Sound //
 	UPROPERTY()
@@ -56,6 +57,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Audio")
 	TObjectPtr<USoundBase> OnHuntedCue;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Common Event|Audio")
+	TObjectPtr<USoundBase> CommonSound;
+	UPROPERTY(EditDefaultsOnly, Category = "Common Event|Audio")
+	TObjectPtr<USoundBase> FootstepSound;
+	UPROPERTY(EditDefaultsOnly, Category = "Common Event|Audio")
+	TObjectPtr<USoundAttenuation> CommonEventAttenuation;
+
 	int32 GetRageModifier();
 	float GetRageCooldown();
 
@@ -63,6 +71,12 @@ public:
 	void StopRageSound();
 	void PlayChaseSound();
 	void StopChaseSound();
+
+	// Common Event
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayCommonEventSound();
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PlayFootstepSound();
 
 	// Rage
 	UFUNCTION(NetMulticast, Reliable)
@@ -126,4 +140,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<AGhostAIController> GhostAIController;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Common Event|Manifest")
+	TSubclassOf<AActor> ManifestActorClass;
 };

@@ -27,7 +27,7 @@ void UCharacterStatsComponent::ResetStats()
 	SetCurrentSanity(100.0f);
 	SetCurrentStamina(10.0f);
 	SetDefaultSpeed(400.0f);
-	SetSanityDrainRate(10.0f);
+	SetSanityDrainRate(0.18f);
 }
 
 void UCharacterStatsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -51,8 +51,8 @@ void UCharacterStatsComponent::DecreaseLife(int32 Amount) { Life -= Amount; }
 
 float UCharacterStatsComponent::GetCurrentSanity() const { return CurrentSanity; }
 void UCharacterStatsComponent::SetCurrentSanity(float NewCurrentSanity) { CurrentSanity = NewCurrentSanity; }
-void UCharacterStatsComponent::IncreaseCurrentSanity(float Amount) { CurrentSanity += Amount; }
-void UCharacterStatsComponent::DecreaseCurrentSanity(float Amount) { CurrentSanity -= Amount; }
+void UCharacterStatsComponent::IncreaseCurrentSanity(float Amount) { CurrentSanity = FMath::Clamp(CurrentSanity + Amount, 0.0f, MaxSanity); }
+void UCharacterStatsComponent::DecreaseCurrentSanity(float Amount) { CurrentSanity = FMath::Clamp(CurrentSanity - Amount, 0.0f, MaxSanity); }
 void UCharacterStatsComponent::SetSanityDrainRate(float NewSanityDrainRate) { SanityDrainRate = NewSanityDrainRate; }
 float UCharacterStatsComponent::GetSanityDrainRate() { return SanityDrainRate; }
 

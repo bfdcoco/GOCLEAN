@@ -14,7 +14,7 @@ AGhostBase::AGhostBase()
 	StatsComp = CreateDefaultSubobject<UGhostStatsComponent>(TEXT("GhostStats"));
 
 	// Default variables
-	BehaviorEventCycleDelay = 15.0f;
+	BehaviorEventCycleDelay = 1.5f;
 	bCanSetBehaviourEventCycleTimer = true;
 	CurrentPatrolIndex = 0;
 
@@ -73,6 +73,20 @@ int32 AGhostBase::GetRageModifier()
 float AGhostBase::GetRageCooldown()
 {
 	return StatsComp->GetRageCooldown();
+}
+
+void AGhostBase::Multicast_PlayCommonEventSound_Implementation()
+{
+	if (CommonSound == nullptr || CommonEventAttenuation == nullptr) return;
+
+	UGameplayStatics::PlaySoundAtLocation(this, CommonSound, GetActorLocation(), 1.0f, 1.0f, 0.0f, CommonEventAttenuation);
+}
+
+void AGhostBase::Multicast_PlayFootstepSound_Implementation()
+{
+	if (FootstepSound == nullptr || CommonEventAttenuation == nullptr) return;
+
+	UGameplayStatics::PlaySoundAtLocation(this, FootstepSound, GetActorLocation(), 1.0f, 1.0f, 0.0f, CommonEventAttenuation);
 }
 
 void AGhostBase::PlayRageSound()
@@ -157,9 +171,9 @@ void AGhostBase::EvaluateBehaviorEventCondition()
 {
 	if (GhostAIController == nullptr) return;
 
-	if (GhostAIController->CheckBehaviorEventCondition()) 
-		PerformBehaviorEvent();
-	else return;
+	//if (GhostAIController->CheckBehaviorEventCondition())
+	PerformBehaviorEvent();
+	//else return;
 }
 
 void AGhostBase::PerformBehaviorEvent()
@@ -167,7 +181,7 @@ void AGhostBase::PerformBehaviorEvent()
 	int32 RandEventNum;
 	int32 RandEvidenceBehaviorNum;
 	int32 RandCommonBehaviorNum;
-	RandEventNum = FMath::RandRange(0, 8);
+	RandEventNum = 5;
 
 	UE_LOG(LogTemp, Warning, TEXT("---------------------------------------------------------------"));
 
