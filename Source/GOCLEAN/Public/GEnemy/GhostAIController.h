@@ -92,10 +92,8 @@ private:
 	void ChasePlayer(AActor* TargetPlayerCharacter);
 
 	// Rage
-	void EnableRageTrigger()
-	{
-		bCanRageEvent = true;
-	}
+	void EnableRageTrigger() { bCanRageEvent = true; }
+	void EndRageEvent();
 
 	// Hunt
 	void PlayerHunt();

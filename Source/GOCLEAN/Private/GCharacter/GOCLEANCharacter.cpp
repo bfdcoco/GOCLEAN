@@ -109,7 +109,7 @@ void AGOCLEANCharacter::Tick(float DeltaTime)
 		}
 	}
 
-	StatsComp->DecreaseCurrentSanity(StatsComp->GetSanityDrainRate() * DeltaTime);
+	StatsComp->DecreaseCurrentSanity(StatsComp->GetSanityDrainRate() * StatsComp->GetSanityDrainMultiplier() * DeltaTime);
 
 	// AimPitch adjustment
 	if (IsLocallyControlled())
@@ -245,6 +245,25 @@ void AGOCLEANCharacter::Multicast_ToggleFlashlight_Implementation()
 void AGOCLEANCharacter::Multicast_PlayerInteractionAnim_Implementation()
 {
 	PlayerInteractionAnim();
+}
+void AGOCLEANCharacter::Multicast_SetDefaultSpeed_Implementation(float NewDefaultSpeed)
+{
+	if (StatsComp == nullptr) return;
+
+	StatsComp->SetDefaultSpeed(NewDefaultSpeed);
+
+	if (AnimState == EPlayerAnimState::Crouch)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = StatsComp->GetCrouchSpeed();
+	}
+	else if (bIsSprinting)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = StatsComp->GetSprintSpeed();
+	}
+	else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = StatsComp->GetWalkSpeed();
+	}
 }
 void AGOCLEANCharacter::Multicast_Crouch_Implementation()
 {

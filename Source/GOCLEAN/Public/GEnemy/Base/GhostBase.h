@@ -18,11 +18,13 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/AudioComponent.h"
+#include "ServerModule/GameSession/PlayerSessionState.h"
 #include "GhostBase.generated.h"
 
 class AGhostAIController;
 class UCommonBehavior;
 class UEvidenceBehavior;
+class APlayerSessionState;
 
 UCLASS(Abstract)
 class GOCLEAN_API AGhostBase : public ACharacter
@@ -81,9 +83,9 @@ public:
 	// Rage
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_PlayRageSound();
-
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_StopRageSound();
+	void NotifyUnendingRageStarted();
 
 	// Chase
 	UFUNCTION(NetMulticast, Reliable)
@@ -133,8 +135,11 @@ protected:
 	bool bCanSetBehaviourEventCycleTimer;
 	FTimerHandle GhostBehaviorEventCycleHandle;
 
-private:
+	// Specific event //
+	virtual void OnUnendingRageStarted() {}
+	virtual void OnPlayerSanityHalfReached(APlayerSessionState* InPlayerState) {}
 
+private:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USkeletalMeshComponent> MeshComp;
 
@@ -143,4 +148,11 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Common Event|Manifest")
 	TSubclassOf<AActor> ManifestActorClass;
+
+	UPROPERTY()
+	TSet<TObjectPtr<APlayerSessionState>> SanityHalfTriggeredPlayers;
+
+	void CheckPlayerSanityHalfReached();
+
+	FTimerHandle CheckPlayerSanityHalfReachedHandle;
 };

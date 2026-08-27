@@ -226,17 +226,24 @@ void AGhostAIController::CheckRageEventCondition()
 void AGhostAIController::StartUnendingRageEvent()
 {
 	bIsUnendingRageEvent = true;
+
+	AGhostBase* GhostCharacter = Cast<AGhostBase>(GetPawn());
+	if (GhostCharacter == nullptr) return;
+
+	GhostCharacter->NotifyUnendingRageStarted();
+
 	StartChase();
 }
 
 void AGhostAIController::StartChase()
 {
 	UpdateAlivePlayerList();
-	bIsChasing = true;
-	bIsPatrolling = false;
 
 	FindTarget();
 	if (TargetPlayer == nullptr) return;
+
+	bIsChasing = true;
+	bIsPatrolling = false;
 
 	ChasePlayer(TargetPlayer);
 }
@@ -251,8 +258,36 @@ void AGhostAIController::ChasePlayer(AActor* TargetPlayerCharacter)
 	else if(bIsUnendingRageEvent) GetWorld()->GetTimerManager().SetTimer(ChasingPlayerHandle, this, &AGhostAIController::EndlessPlayerHunt, 0.2f, true);
 }
 
+void AGhostAIController::EndRageEvent()
+{
+	AGhostBase* GhostCharacter = Cast<AGhostBase>(GetPawn());
+	if (GhostCharacter == nullptr) return;
+
+	bIsRageEvent = false;
+	bIsChasing = false;
+	bIsPatrolling = true;
+
+	GetWorld()->GetTimerManager().SetTimer(EnableRageEventTriggerHandle, this, &AGhostAIController::EnableRageTrigger, GhostCharacter->GetRageCooldown(), false);
+
+	MoveToPatrolPoint();
+}
+
 void AGhostAIController::PlayerHunt()
 {
+	if (TargetPlayer == nullptr)
+	{
+		EndRageEvent();
+		return;
+	}
+
+	APlayerSessionState* PSS = TargetPlayer->GetPlayerState<APlayerSessionState>();
+
+	if (PSS == nullptr)
+	{
+		EndRageEvent();
+		return;
+	}
+
 	if (!bIsRageEvent) return;
 
 	//UE_LOG(LogTemp, Warning, TEXT("Hunting Player"));
@@ -281,15 +316,8 @@ void AGhostAIController::PlayerHunt()
 		UE_LOG(LogTemp, Warning, TEXT("Player Hunted"));
 
 		GetWorld()->GetTimerManager().ClearTimer(ChasingPlayerHandle);
-		bIsRageEvent = false;
-		bCanRageEvent = true;
-		bIsChasing = false;
-		bIsPatrolling = true;
-		//PlayersSanityCorruptionRate = 0;
-
-		GetWorld()->GetTimerManager().SetTimer(EnableRageEventTriggerHandle, this, &AGhostAIController::EnableRageTrigger, GhostCharacter->GetRageCooldown(), false);
-
-		MoveToPatrolPoint();
+		
+		EndRageEvent();
 	}
 }
 void AGhostAIController::Server_RequestPlayerHunt_Implementation()

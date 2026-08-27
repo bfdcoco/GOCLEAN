@@ -47,7 +47,7 @@ void UFlashlightBreakdown::ExecuteBehavior(AActor* GhostActor)
 	}
 
 	GetWorld()->GetTimerManager().SetTimer(ToggleFlashlightHandle, this, &UFlashlightBreakdown::ToggleTargetFlashlights, 0.5f, true);
-	GetWorld()->GetTimerManager().SetTimer(UnlockFlashlightHandle, this, &UFlashlightBreakdown::UnlockTargetFlashlights, 6.5f, false);
+	GetWorld()->GetTimerManager().SetTimer(UnlockFlashlightHandle, this, &UFlashlightBreakdown::UnlockTargetFlashlights, 5.5f, false);
 
 	UE_LOG(LogTemp, Warning, TEXT("FlashlightBreakdown Implemented"));
 }

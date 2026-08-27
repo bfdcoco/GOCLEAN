@@ -5,6 +5,8 @@
 #include "GEnemy/CommonBehaviors/Components/FlashlightBreakdown.h"
 #include "GEnemy/CommonBehaviors/Components/PlayFootstepSound.h"
 #include "GEnemy/GhostAIController.h"
+#include "GCharacter/GOCLEANCharacter.h"
+#include "ServerModule/GameSession/PlayerSessionState.h"
 
 
 AGhostBase::AGhostBase()
@@ -14,7 +16,7 @@ AGhostBase::AGhostBase()
 	StatsComp = CreateDefaultSubobject<UGhostStatsComponent>(TEXT("GhostStats"));
 
 	// Default variables
-	BehaviorEventCycleDelay = 1.5f;
+	BehaviorEventCycleDelay = 15.0f;
 	bCanSetBehaviourEventCycleTimer = true;
 	CurrentPatrolIndex = 0;
 
@@ -50,9 +52,6 @@ void AGhostBase::BeginPlay()
 	GetCharacterMovement()->MaxWalkSpeed = StatsComp->GetBaseMovementSpeed();
 	// StatsComp->InitActivityLevel();
 
-	// Init BehaviorEventCycle
-	GetWorldTimerManager().SetTimer(GhostBehaviorEventCycleHandle, this, &AGhostBase::EvaluateBehaviorEventCondition, BehaviorEventCycleDelay, true);
-
 	// Sound
 	if (RageLoopAudio && RageCue)
 	{
@@ -63,6 +62,14 @@ void AGhostBase::BeginPlay()
 	{
 		ChaseLoopAudio->SetSound(ChaseCue);
 	}
+
+	if (!HasAuthority()) return;
+
+	// Init BehaviorEventCycle
+	GetWorldTimerManager().SetTimer(GhostBehaviorEventCycleHandle, this, &AGhostBase::EvaluateBehaviorEventCondition, BehaviorEventCycleDelay, true);
+
+	// Specific event
+	GetWorldTimerManager().SetTimer(CheckPlayerSanityHalfReachedHandle, this, &AGhostBase::CheckPlayerSanityHalfReached, 1.0f, true);
 }
 
 int32 AGhostBase::GetRageModifier()
@@ -171,9 +178,9 @@ void AGhostBase::EvaluateBehaviorEventCondition()
 {
 	if (GhostAIController == nullptr) return;
 
-	//if (GhostAIController->CheckBehaviorEventCondition())
-	PerformBehaviorEvent();
-	//else return;
+	if (GhostAIController->CheckBehaviorEventCondition())
+		PerformBehaviorEvent();
+	else return;
 }
 
 void AGhostBase::PerformBehaviorEvent()
@@ -181,7 +188,7 @@ void AGhostBase::PerformBehaviorEvent()
 	int32 RandEventNum;
 	int32 RandEvidenceBehaviorNum;
 	int32 RandCommonBehaviorNum;
-	RandEventNum = 5;
+	RandEventNum = FMath::RandRange(0, 8);
 
 	UE_LOG(LogTemp, Warning, TEXT("---------------------------------------------------------------"));
 
@@ -213,6 +220,28 @@ void AGhostBase::PerformBehaviorEvent()
 	}
 }
 
+void AGhostBase::CheckPlayerSanityHalfReached()
+{
+	if (GhostAIController == nullptr) return;
+	
+	GhostAIController->UpdateAlivePlayerList();
+
+	for (AGOCLEANCharacter* PlayerCharacter : GhostAIController->AlivePlayers)
+	{
+		if (PlayerCharacter == nullptr) continue;
+
+		APlayerSessionState* PSS = PlayerCharacter->GetPlayerState<APlayerSessionState>();
+		if (PSS == nullptr) continue;
+
+		if (SanityHalfTriggeredPlayers.Contains(PSS)) continue;
+
+		if (PlayerCharacter->GetPlayerCurrentSanity() > 50.0f) continue;
+
+		SanityHalfTriggeredPlayers.Add(PSS);
+		OnPlayerSanityHalfReached(PSS);
+	}
+}
+
 
 // Server //
 void AGhostBase::Server_RequestSetVisible_Implementation(bool IsVisible)
@@ -222,4 +251,11 @@ void AGhostBase::Server_RequestSetVisible_Implementation(bool IsVisible)
 void AGhostBase::Multicast_SetVisible_Implementation(bool IsVisible)
 {
 	GetMesh()->SetHiddenInGame(!IsVisible);
+}
+
+void AGhostBase::NotifyUnendingRageStarted()
+{
+	if (!HasAuthority()) return;
+
+	OnUnendingRageStarted();
 }

@@ -85,6 +85,16 @@ public:
 	UFUNCTION(BlueprintPure)
 	EPlayerAnimState GetAnimState() { return AnimState; }
 
+	void SetSanityDrainMultiplier(float NewSanityDrainMultiplier)
+	{
+		if (StatsComp == nullptr) return;
+
+		StatsComp->SetSanityDrainMultiplier(NewSanityDrainMultiplier);
+	}
+
+	float GetDefaultSpeed() const { return StatsComp->GetWalkSpeed(); };
+	void SetDefaultSpeed(float NewDefaultSpeed) { StatsComp->SetDefaultSpeed(NewDefaultSpeed); };
+
 	// Server //
 
 	void TryCrouch();
@@ -112,6 +122,8 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_RequestRespawn();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_SetDefaultSpeed(float NewDefaultSpeed);
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_Crouch();
 	UFUNCTION(NetMulticast, Reliable)

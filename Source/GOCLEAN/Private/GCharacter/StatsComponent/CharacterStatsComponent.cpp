@@ -28,6 +28,7 @@ void UCharacterStatsComponent::ResetStats()
 	SetCurrentStamina(10.0f);
 	SetDefaultSpeed(400.0f);
 	SetSanityDrainRate(0.18f);
+	SetSanityDrainMultiplier(1.0f);
 }
 
 void UCharacterStatsComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
